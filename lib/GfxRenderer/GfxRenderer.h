@@ -156,6 +156,19 @@ class GfxRenderer {
   /// Returns the kerning adjustment between two adjacent codepoints.
   int getKerning(int fontId, uint32_t leftCp, uint32_t rightCp, EpdFontFamily::Style style) const;
   int getTextAdvanceX(int fontId, const char* text, EpdFontFamily::Style style) const;
+  /// Result of fitTextPrefix().
+  struct TextFit {
+    static constexpr size_t NONE = static_cast<size_t>(-1);
+    size_t bytes;      ///< Bytes of the longest prefix that fits (== len when the whole text fits).
+    size_t lastSpace;  ///< Byte index of the last ' ' before `bytes`, or NONE.
+  };
+  /// Single-pass line fit: finds the longest prefix of text[0, len) whose advance width is <= maxWidth, cut at a
+  /// UTF-8 codepoint boundary, and the last space inside that prefix. When nothing fits, the prefix is one codepoint.
+  /// Widths are accumulated with the same rounding as getTextAdvanceX() (so they match drawText()), in one pass
+  /// instead of re-measuring from the start for every candidate cut. On the built-in-font path a ligature is applied
+  /// to the full text, so a cut never falls inside a ligature sequence. text[len] must be readable and must not
+  /// continue a ligature (a '\n', '\r' or NUL terminator is fine), because ligature lookahead reads past the cut.
+  TextFit fitTextPrefix(int fontId, const char* text, size_t len, int maxWidth, EpdFontFamily::Style style) const;
   int getFontAscenderSize(int fontId) const;
   int getLineHeight(int fontId) const;
   std::string truncatedText(int fontId, const char* text, int maxWidth,

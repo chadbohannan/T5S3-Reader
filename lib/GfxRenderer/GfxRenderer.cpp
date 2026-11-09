@@ -1228,6 +1228,75 @@ int GfxRenderer::getTextAdvanceX(const int fontId, const char* text, EpdFontFami
   return widthPx;
 }
 
+GfxRenderer::TextFit GfxRenderer::fitTextPrefix(const int fontId, const char* text, const size_t len,
+                                                const int maxWidth, const EpdFontFamily::Style style) const {
+  TextFit fit{len, TextFit::NONE};
+  const auto* const begin = reinterpret_cast<const uint8_t*>(text);
+  const uint8_t* const end = begin + len;
+  const uint8_t* p = begin;
+  size_t lastSpace = TextFit::NONE;
+
+  // Called when the codepoint [start, next) pushes the width past maxWidth. The prefix ends before it, but always
+  // holds at least one codepoint so the caller makes progress.
+  auto overflow = [&](const uint8_t* start, const uint8_t* next) {
+    fit.bytes = static_cast<size_t>((start == begin ? next : start) - begin);
+    fit.lastSpace = lastSpace;
+    return fit;
+  };
+
+  // SD card fonts with an advance table: plain sum of 12.4 advances, snapped once (same as getTextAdvanceX).
+  auto sdIt = sdCardFonts_.find(fontId);
+  if (sdIt != sdCardFonts_.end() && sdIt->second->hasAdvanceTable()) {
+    int32_t widthFP = 0;
+    const uint8_t styleIdx = resolveSdCardStyle(*sdIt->second, style);
+    while (p < end) {
+      const uint8_t* start = p;
+      const uint32_t cp = utf8NextCodepoint(&p);
+      if (cp == 0) break;
+      widthFP += sdIt->second->getAdvance(cp, styleIdx);
+      if (fp4::toPixel(widthFP) > maxWidth) return overflow(start, p);
+      if (cp == ' ') lastSpace = static_cast<size_t>(start - begin);
+    }
+    return fit;
+  }
+
+  const auto fontIt = fontMap.find(fontId);
+  if (fontIt == fontMap.end()) {
+    LOG_ERR("GFX", "Font %d not found", fontId);
+    return fit;  // Width 0 for an unknown font, so everything "fits" (same as getTextAdvanceX).
+  }
+
+  // Built-in fonts: differential rounding, kerning, ligatures (same as getTextAdvanceX).
+  const auto& font = fontIt->second;
+  uint32_t prevCp = 0;
+  int widthPx = 0;
+  int32_t prevAdvanceFP = 0;
+  while (p < end) {
+    const uint8_t* start = p;
+    uint32_t cp = utf8NextCodepoint(&p);
+    if (cp == 0) break;
+    if (utf8IsCombiningMark(cp)) continue;  // No advance, so the width cannot newly overflow.
+    const bool isSpace = (cp == ' ');
+
+    const char* afterCp = reinterpret_cast<const char*>(p);
+    cp = font.applyLigatures(cp, afterCp, style);
+    p = reinterpret_cast<const uint8_t*>(afterCp);
+    if (p > end) p = end;
+
+    if (prevCp != 0) {
+      widthPx += fp4::toPixel(prevAdvanceFP + font.getKerning(prevCp, cp, style));
+    }
+    const EpdGlyph* glyph = font.getGlyph(cp, style);
+    prevAdvanceFP = glyph ? glyph->advanceX : 0;
+    prevCp = cp;
+
+    // Width if the text ended after this codepoint.
+    if (widthPx + fp4::toPixel(prevAdvanceFP) > maxWidth) return overflow(start, p);
+    if (isSpace) lastSpace = static_cast<size_t>(start - begin);
+  }
+  return fit;
+}
+
 int GfxRenderer::getFontAscenderSize(const int fontId) const {
   const auto fontIt = fontMap.find(fontId);
   if (fontIt == fontMap.end()) {

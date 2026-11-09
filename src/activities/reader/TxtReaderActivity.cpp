@@ -8,6 +8,9 @@
 #include <Utf8.h>
 
 #include <algorithm>
+#include <cstring>
+
+#include <esp_timer.h>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -24,21 +27,38 @@ namespace {
 constexpr size_t CHUNK_SIZE = 8 * 1024;  // 8KB chunk for reading
 // Cache file magic and version
 constexpr uint32_t CACHE_MAGIC = 0x54585449;  // "TXTI"
-constexpr uint8_t CACHE_VERSION = 3;          // Increment when cache format changes
+constexpr uint8_t CACHE_VERSION = 4;          // Increment when cache format changes
 constexpr char UTF8_ELLIPSIS[] = "\xE2\x80\xA6";
 
-bool isUtf8ContinuationByte(char c) { return (static_cast<uint8_t>(c) & 0xC0) == 0x80; }
+#ifdef TXT_INDEX_DUMP_OFFSETS
+// Index profiling (benchmark builds only): running totals in microseconds, reset per buildPageIndex().
+struct IndexProfile {
+  int64_t loadUs, readUs, fontUs, fitUs, yieldUs, outerYieldUs;  // yieldUs is inside loadUs, outerYieldUs is not
+  uint32_t pages, fitCalls, yields, refills;
+};
+IndexProfile gProf;
+#define PROF_NOW() esp_timer_get_time()
+#define PROF_ADD(field, t0) (gProf.field += esp_timer_get_time() - (t0))
+#define PROF_COUNT(field) (gProf.field++)
+#else
+#define PROF_NOW() 0
+#define PROF_ADD(field, t0) ((void)(t0))
+#define PROF_COUNT(field) ((void)0)
+#endif
 
-size_t nextUtf8Boundary(const std::string& text, size_t pos) {
-  if (pos >= text.size()) {
-    return text.size();
+// Bitwise CRC-32 (IEEE) over the page offsets: a quick same-or-different fingerprint for index regression checks.
+uint32_t crc32Offsets(const std::vector<size_t>& offsets) {
+  uint32_t crc = 0xFFFFFFFFu;
+  for (const size_t value : offsets) {
+    const uint32_t v = static_cast<uint32_t>(value);
+    for (int byte = 0; byte < 4; byte++) {
+      crc ^= (v >> (byte * 8)) & 0xFFu;
+      for (int bit = 0; bit < 8; bit++) {
+        crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1u)));
+      }
+    }
   }
-
-  ++pos;
-  while (pos < text.size() && isUtf8ContinuationByte(text[pos])) {
-    ++pos;
-  }
-  return pos;
+  return ~crc;
 }
 }  // namespace
 
@@ -186,7 +206,13 @@ void TxtReaderActivity::initializeReader() {
   LOG_DBG("TRS", "Viewport: %dx%d, lines per page: %d", viewportWidth, viewportHeight, linesPerPage);
 
   // Try to load cached page index first
-  if (!loadPageIndexCache()) {
+#ifdef TXT_INDEX_DUMP_OFFSETS
+  // Index benchmarking: always rebuild so the timing and offsets reflect the current algorithm, not a cached index.
+  const bool cacheHit = false;
+#else
+  const bool cacheHit = loadPageIndexCache();
+#endif
+  if (!cacheHit) {
     // Cache not found, build page index
     buildPageIndex();
     // Save to cache for next time
@@ -210,11 +236,72 @@ void TxtReaderActivity::buildPageIndex() {
 
   GUI.drawPopup(renderer, tr(STR_INDEXING));
 
+  const unsigned long indexStartMs = millis();
+#ifdef TXT_INDEX_DUMP_OFFSETS
+  gProf = {};
+#endif
+
+  // Read the file once, front to back, through a sliding buffer instead of re-reading an 8 KB chunk per page. Each
+  // page is still wrapped from a CHUNK_SIZE window starting at its own offset, so the offsets match the per-page read.
+  constexpr size_t INDEX_BUFFER_SIZE = 2 * CHUNK_SIZE;
+  FsFile file;
+  auto* buffer = static_cast<uint8_t*>(malloc(INDEX_BUFFER_SIZE + 1));
+  const bool sequential = buffer && Storage.openFileForRead("TXT", txt->getPath(), file);
+  const bool sdFont = renderer.isSdCardFont(cachedFontId);
+  size_t bufStart = 0;      // File offset of buffer[0]
+  size_t bufLen = 0;        // Valid bytes in buffer
+  size_t fontScanned = 0;   // File offset up to which the SD-font advance table has been extended
+
+  // Makes buffer cover [off, off + need). Keeps the bytes already read that lie at or after `off`.
+  auto ensureWindow = [&](size_t off, size_t need) -> bool {
+    if (off >= bufStart && off + need <= bufStart + bufLen) return true;
+    const int64_t readStart = PROF_NOW();
+    const size_t keep = (off >= bufStart && off < bufStart + bufLen) ? bufStart + bufLen - off : 0;
+    if (keep > 0) memmove(buffer, buffer + (off - bufStart), keep);
+    bufStart = off;
+    bufLen = keep;
+    const size_t want = std::min(INDEX_BUFFER_SIZE - keep, fileSize - (off + keep));
+    if (want == 0 || !file.seek(off + keep)) return false;
+    const int got = file.read(buffer + keep, want);
+    if (got <= 0) return false;
+    bufLen = keep + static_cast<size_t>(got);
+    buffer[bufLen] = '\0';
+    PROF_ADD(readUs, readStart);
+    PROF_COUNT(refills);
+
+    if (sdFont) {
+      // Extend the advance table over the bytes not scanned yet, stopping at a complete UTF-8 character.
+      const int64_t fontStart = PROF_NOW();
+      const size_t from = std::max(fontScanned, bufStart) - bufStart;
+      size_t len = bufLen - from;
+      if (bufStart + bufLen < fileSize) {
+        len = static_cast<size_t>(utf8SafeTruncateBuffer(reinterpret_cast<const char*>(buffer + from), static_cast<int>(len)));
+      }
+      const uint8_t saved = buffer[from + len];
+      buffer[from + len] = '\0';
+      renderer.ensureSdCardFontReady(cachedFontId, reinterpret_cast<const char*>(buffer + from), 0x01);
+      buffer[from + len] = saved;
+      fontScanned = bufStart + from + len;
+      PROF_ADD(fontUs, fontStart);
+    }
+    return off + need <= bufStart + bufLen;
+  };
+
   while (offset < fileSize) {
     std::vector<std::string> tempLines;
     size_t nextOffset = offset;
+    const int64_t loadStart = PROF_NOW();
 
-    if (!loadPageAtOffset(offset, tempLines, nextOffset)) {
+    bool ok;
+    if (sequential) {
+      const size_t window = std::min(CHUNK_SIZE, fileSize - offset);
+      ok = ensureWindow(offset, window) && wrapPage(buffer + (offset - bufStart), window, offset, tempLines, nextOffset);
+    } else {
+      ok = loadPageAtOffset(offset, tempLines, nextOffset);  // Fallback: per-page read
+    }
+    PROF_ADD(loadUs, loadStart);
+    PROF_COUNT(pages);
+    if (!ok) {
       break;
     }
 
@@ -230,12 +317,37 @@ void TxtReaderActivity::buildPageIndex() {
 
     // Yield to other tasks periodically while building large TXT indexes.
     if ((pageOffsets.size() & 0x07) == 0) {
+      const int64_t yieldStart = PROF_NOW();
       vTaskDelay(1);
+      PROF_ADD(outerYieldUs, yieldStart);
+      PROF_COUNT(yields);
     }
   }
 
+  if (sequential) file.close();
+  free(buffer);
+
+  // Take the elapsed time before any logging so serial output is not part of the measurement.
+  const unsigned long indexElapsedMs = millis() - indexStartMs;
+
   totalPages = pageOffsets.size();
   LOG_DBG("TRS", "Built page index: %d pages", totalPages);
+  LOG_INF("TRS", "Index built: %zu bytes, %d pages, %lu ms, crc32 %08lx", fileSize, totalPages, indexElapsedMs,
+          static_cast<unsigned long>(crc32Offsets(pageOffsets)));
+
+#ifdef TXT_INDEX_DUMP_OFFSETS
+  LOG_INF("TRS",
+          "profile: load %lld ms (read %lld, font %lld, fit %lld, yield %lld, other %lld); outer yield %lld ms; pages %u, fit calls %u, "
+          "yields %u, refills %u",
+          gProf.loadUs / 1000, gProf.readUs / 1000, gProf.fontUs / 1000, gProf.fitUs / 1000, gProf.yieldUs / 1000,
+          (gProf.loadUs - gProf.readUs - gProf.fontUs - gProf.fitUs - gProf.yieldUs) / 1000, gProf.outerYieldUs / 1000,
+          static_cast<unsigned>(gProf.pages), static_cast<unsigned>(gProf.fitCalls),
+          static_cast<unsigned>(gProf.yields), static_cast<unsigned>(gProf.refills));
+  // One line per offset so two captured logs can be compared with `diff`.
+  for (size_t i = 0; i < pageOffsets.size(); i++) {
+    LOG_INF("TRS", "page-offset %zu %zu", i, pageOffsets[i]);
+  }
+#endif
 }
 
 bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>& outLines, size_t& nextOffset) {
@@ -264,48 +376,21 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>
     renderer.ensureSdCardFontReady(cachedFontId, reinterpret_cast<const char*>(buffer), 0x01);
   }
 
+  const bool ok = wrapPage(buffer, chunkSize, offset, outLines, nextOffset);
+  free(buffer);
+  return ok;
+}
+
+// Wraps one page of text out of `buffer`, which holds the file bytes [offset, offset + chunkSize). The byte after the
+// window must be readable (ligature lookahead). Shared by page rendering and index building, so both always agree.
+bool TxtReaderActivity::wrapPage(const uint8_t* buffer, const size_t chunkSize, const size_t offset,
+                                 std::vector<std::string>& outLines, size_t& nextOffset) {
+  outLines.clear();
+  const size_t fileSize = txt->getFileSize();
+
   // Parse lines from buffer
   size_t pos = 0;
   uint32_t wrapSteps = 0;
-
-  auto textWidth = [this](const std::string& text) {
-    return renderer.getTextAdvanceX(cachedFontId, text.c_str(), EpdFontFamily::REGULAR);
-  };
-
-  auto findWrapBreak = [&](const std::string& text) -> size_t {
-    std::vector<size_t> utf8Boundaries;
-    utf8Boundaries.reserve(std::min<size_t>(text.size(), 512));
-    for (size_t p = 0; p < text.size();) {
-      p = nextUtf8Boundary(text, p);
-      utf8Boundaries.push_back(p);
-    }
-
-    if (utf8Boundaries.empty()) {
-      return 0;
-    }
-
-    size_t low = 0;
-    size_t high = utf8Boundaries.size();
-    while (low < high) {
-      const size_t mid = (low + high + 1) / 2;
-      const size_t bytes = utf8Boundaries[mid - 1];
-      if (textWidth(text.substr(0, bytes)) <= viewportWidth) {
-        low = mid;
-      } else {
-        high = mid - 1;
-      }
-    }
-
-    const size_t maxFit = (low == 0) ? utf8Boundaries.front() : utf8Boundaries[low - 1];
-    if (maxFit < text.length()) {
-      const size_t spacePos = text.rfind(' ', maxFit > 0 ? maxFit - 1 : 0);
-      if (spacePos != std::string::npos && spacePos > 0) {
-        return spacePos;
-      }
-    }
-
-    return maxFit;
-  };
 
   while (pos < chunkSize && static_cast<int>(outLines.size()) < linesPerPage) {
     // Find end of line
@@ -329,43 +414,52 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>
     bool hasCR = (lineContentLen > 0 && buffer[pos + lineContentLen - 1] == '\r');
     size_t displayLen = hasCR ? lineContentLen - 1 : lineContentLen;
 
-    // Extract line content for display (without CR/LF)
-    std::string line(reinterpret_cast<char*>(buffer + pos), displayLen);
+    // Wrap the source line in place: each screen line costs one single-pass fit over the remaining text.
+    const char* linePtr = reinterpret_cast<const char*>(buffer + pos);
+    size_t remaining = displayLen;
 
     // Track position within this source line (in bytes from pos)
     size_t lineBytePos = 0;
 
-    // Word wrap if needed
-    while (!line.empty() && static_cast<int>(outLines.size()) < linesPerPage) {
-      const int lineWidth = textWidth(line);
+    while (remaining > 0 && static_cast<int>(outLines.size()) < linesPerPage) {
+      const int64_t fitStart = PROF_NOW();
+      const auto fit = renderer.fitTextPrefix(cachedFontId, linePtr, remaining, viewportWidth, EpdFontFamily::REGULAR);
+      PROF_ADD(fitUs, fitStart);
+      PROF_COUNT(fitCalls);
 
-      if (lineWidth <= viewportWidth) {
-        outLines.push_back(line);
+      if (fit.bytes >= remaining) {
+        outLines.emplace_back(linePtr, remaining);
         lineBytePos = displayLen;  // Consumed entire display content
-        line.clear();
+        remaining = 0;
         break;
       }
 
-      const size_t breakPos = findWrapBreak(line);
+      // Break at the last space inside the fitting prefix (never at index 0), else at the cut itself.
+      const bool spaceBreak = fit.lastSpace != GfxRenderer::TextFit::NONE && fit.lastSpace > 0;
+      const size_t breakPos = spaceBreak ? fit.lastSpace : fit.bytes;
       if (breakPos == 0) break;
 
-      outLines.push_back(line.substr(0, breakPos));
+      outLines.emplace_back(linePtr, breakPos);
 
       // Skip space at break point
       size_t skipChars = breakPos;
-      if (breakPos < line.length() && line[breakPos] == ' ') {
+      if (breakPos < remaining && linePtr[breakPos] == ' ') {
         skipChars++;
       }
       lineBytePos += skipChars;
-      line = line.substr(skipChars);
+      linePtr += skipChars;
+      remaining -= skipChars;
 
       if ((++wrapSteps & 0x0F) == 0) {
+        const int64_t yieldStart = PROF_NOW();
         vTaskDelay(1);
+        PROF_ADD(yieldUs, yieldStart);
+        PROF_COUNT(yields);
       }
     }
 
     // Determine how much of the source buffer we consumed
-    if (line.empty()) {
+    if (remaining == 0) {
       // Fully consumed this source line, move past the newline
       pos = lineEnd + 1;
     } else {
@@ -388,8 +482,6 @@ bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>
   if (nextOffset > fileSize) {
     nextOffset = fileSize;
   }
-
-  free(buffer);
 
   return !outLines.empty();
 }
