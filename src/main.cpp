@@ -383,7 +383,7 @@ void setup() {
   if (consumeUsbStorageModeFlag()) {
     setupDisplayAndBuiltinFonts();
     display.setFlipOutput(SETTINGS.flipUi != 0);
-    runUsbStorageMode(renderer);
+    runUsbStorageMode(renderer, mappedInputManager);
   }
   KOREADER_STORE.loadFromFile();
   OPDS_STORE.loadFromFile();
