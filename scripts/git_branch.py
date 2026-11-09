@@ -12,7 +12,7 @@ import subprocess
 import sys
 
 
-DEV_ENVIRONMENTS = {'default', 't5s3-pro', 't5s3-usb-spike', 'lilygo-epd47-s3'}
+DEV_ENVIRONMENTS = {'default', 't5s3-pro', 'lilygo-epd47-s3'}
 
 
 def warn(msg):

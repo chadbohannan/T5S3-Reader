@@ -6,6 +6,7 @@
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalClock.h>
+#include <HalGPIO.h>
 #include <HalStorage.h>
 #include <I18n.h>
 #include <Utf8.h>
@@ -19,6 +20,7 @@
 #include "MappedInputManager.h"
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
+#include "UsbStorageMode.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -44,6 +46,9 @@ void recordUserContentText(FontCacheManager* fcm, const int systemFontId, const 
 
 int HomeActivity::getMenuItemCount() const {
   int count = 4;  // File Browser, Recents, File transfer, Settings
+  if (hasMassStorage) {
+    count++;
+  }
   if (!recentBooks.empty()) {
     count += recentBooks.size();
   }
@@ -153,6 +158,7 @@ void HomeActivity::onEnter() {
   Activity::onEnter();
 
   hasOpdsServers = OPDS_STORE.hasServers();
+  hasMassStorage = gpio.deviceIsT5S3();  // EPD47 cable detection reads Serial, which TinyUSB replaces
 
   selectorIndex = 0;
   recentsLoading = false;
@@ -328,6 +334,11 @@ void HomeActivity::render(RenderLock&&) {
                                         tr(STR_SETTINGS_TITLE)};
   std::vector<UIIcon> menuIcons = {Folder, Recent, Transfer, Settings};
 
+  if (hasMassStorage) {
+    menuItems.insert(menuItems.begin() + 3, tr(STR_MASS_STORAGE_MODE));
+    menuIcons.insert(menuIcons.begin() + 3, MassStorage);
+  }
+
   if (hasOpdsServers) {
     menuItems.insert(menuItems.begin() + 2, tr(STR_OPDS_BROWSER));
     menuIcons.insert(menuIcons.begin() + 2, Library);
@@ -368,6 +379,7 @@ void HomeActivity::activateSelection(int index) {
   const int recentsIdx = idx++;
   const int opdsLibraryIdx = hasOpdsServers ? idx++ : -1;
   const int fileTransferIdx = idx++;
+  const int massStorageIdx = hasMassStorage ? idx++ : -1;
   const int settingsIdx = idx;
 
   if (index < static_cast<int>(recentBooks.size())) {
@@ -380,6 +392,8 @@ void HomeActivity::activateSelection(int index) {
     onOpdsBrowserOpen();
   } else if (menuSelectedIndex == fileTransferIdx) {
     onFileTransferOpen();
+  } else if (menuSelectedIndex == massStorageIdx) {
+    requestUsbStorageMode();
   } else if (menuSelectedIndex == settingsIdx) {
     onSettingsOpen();
   }

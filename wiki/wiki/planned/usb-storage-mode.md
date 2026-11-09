@@ -1,6 +1,6 @@
 # USB Storage Mode
 
-**Status: in progress; the spike passed on 2026-11-09 (branch `usb-drive`, see Spike results).** A "USB Storage Mode" item on the home screen would make the T5S3 appear as a USB drive for its SD card. In this first draft nothing is shared: the device restarts into a dedicated boot path that runs only the drive and one status screen. The plan is from reading the code at T5S3-Reader@`ea452ff` and the arduino-esp32 2.0.17 framework sources, plus web search in 2026-11. The user decided the screen, exit and write behavior on 2026-11-09 (see Decisions), and a review the same day corrected the boot-flow safety claim, simplified the mount status and added logging over a TinyUSB serial port. The spike resolved risk 1: the runtime switch from hardware CDC to TinyUSB works.
+**Status: in progress (branch `usb-drive`).** The spike passed on 2026-11-09 (see Spike results). A dev version followed the same day (see Dev version). A "USB Storage Mode" item on the home screen would make the T5S3 appear as a USB drive for its SD card. In this first draft nothing is shared: the device restarts into a dedicated boot path that runs only the drive and one status screen. The plan is from reading the code at T5S3-Reader@`ea452ff` and the arduino-esp32 2.0.17 framework sources, plus web search in 2026-11. The user decided the screen, exit and write behavior on 2026-11-09 (see Decisions), and a review the same day corrected the boot-flow safety claim, simplified the mount status and added logging over a TinyUSB serial port. The spike resolved risk 1: the runtime switch from hardware CDC to TinyUSB works.
 
 ## Design
 
@@ -93,12 +93,23 @@ On 2026-11-09 a temporary env `t5s3-usb-spike` (`-DUSB_MSC_SPIKE`, `src/UsbMscSp
 - **Bootloader trap.** The first flash, without `enableReboot(false)`, came up as TinyUSB and then dropped into the ROM bootloader within a few seconds. Something on the host made the DTR/RTS sequence; ModemManager was not running, so the cause is unknown. `usb_persist_restart(RESTART_BOOTLOADER)` sets `RTC_CNTL_FORCE_DOWNLOAD_BOOT` (`0x6000812C`). Clearing that register with esptool `write_mem` and an RTS reset still gave `boot:0x1 (DOWNLOAD)`, but `esptool --after watchdog_reset` booted the firmware. The same happens after every normal flash on this board, with the register clear, so the cause is not the register alone; it is still unexplained. `platformio.ini` `[base]` therefore sets `board_upload.after_reset = watchdog_reset`, and a flash of `t5s3-pro` then booted the reader in one step.
 - **`udisksctl power-off` removes the whole device** from the host bus, serial port included, so the eject state could not be read back. A replug is needed after it. Plain `eject` needs root on this host.
 
+## Dev version
+
+The spike ran before the display started and never returned, so on the device the old screen stayed and nothing responded; only BOOT + reset got out. The dev version (2026-11-09) replaced it with the real entry path:
+
+- A home menu item **Mass Storage Mode** after File Transfer, with a cylinder icon (`src/components/icons/storage.h`, `UIIcon::MassStorage`; the enum name avoids the `Storage` macro) and the key `STR_MASS_STORAGE_MODE`. It shows on T5S3 only.
+- `src/UsbStorageMode.cpp` sets the RTC flag and restarts. The flag counts only after a software reset (`ESP_RST_SW`) and is cleared when read. In `setup()` the branch comes after `I18N.setLanguage()`, then `setupDisplayAndBuiltinFonts()` starts the display without SD fonts.
+- `lib/hal/HalUsbMsc` holds the drive: callbacks, counters, link state, and the CDC port with reboot disabled. The TinyUSB objects are created in `begin()`, so a normal boot never registers them.
+- A plain status screen titled "Mass Storage Mode (dev)" shows the three mount lines, card, traffic and battery. For this round the power button always exits (sync, then restart); the exit lock is not built yet.
+
+Checked on the device: the menu item restarts into the mode, the host sees the 29.7 GB drive about 2 s after the restart, the CDC port prints status, and the screen draws.
+
 ## Plan
 
 1. **Spike.** Done; see Spike results.
 2. **Raw SD API** in `HalStorage`, then `HalUsbMsc`, and the switchable log target.
-3. **Boot flag and branch** in `main.cpp`, plus `UsbStorageActivity`.
-4. **Home menu item** and strings.
+3. **Boot flag and branch** in `main.cpp`: done in the dev version, with a plain screen instead of `UsbStorageActivity`.
+4. **Home menu item** and strings: done in the dev version.
 5. **Status screen** metadata, mount lines and the exit lock.
 6. **Hardening:** throughput, the RTC log carried to the card on the next boot, and the test matrix below.
 

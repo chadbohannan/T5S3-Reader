@@ -26,6 +26,7 @@
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
 #include "SdCardFontSystem.h"
+#include "UsbStorageMode.h"
 #include "activities/Activity.h"
 #include "activities/ActivityManager.h"
 #include "activities/settings/SdFirmwareUpdateActivity.h"
@@ -272,7 +273,8 @@ void enterPowerOffKeepingScreen(const char* status) {
 bool g_shutdownRequested = false;
 void requestShutdown() { g_shutdownRequested = true; }
 
-void setupDisplayAndFonts() {
+// Display and built-in fonts only; reads nothing from the SD card.
+void setupDisplayAndBuiltinFonts() {
   display.begin();
   renderer.begin();
   activityManager.begin();
@@ -302,7 +304,10 @@ void setupDisplayAndFonts() {
   renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
   renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);
   renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
+}
 
+void setupDisplayAndFonts() {
+  setupDisplayAndBuiltinFonts();
   sdFontSystem.begin(renderer);
   LOG_DBG("MAIN", "Fonts setup");
 }
@@ -325,10 +330,6 @@ bool shouldResumeReaderOnBoot() {
   return SETTINGS.resumeReaderOnBoot && !APP_STATE.openEpubPath.empty() && APP_STATE.lastSleepFromReader &&
          !mappedInputManager.isPressed(MappedInputManager::Button::Back) && APP_STATE.readerActivityLoadCount == 0;
 }
-
-#ifdef USB_MSC_SPIKE
-[[noreturn]] void runUsbMscSpike();
-#endif
 
 void setup() {
   t1 = millis();
@@ -359,10 +360,6 @@ void setup() {
     return;
   }
 
-#ifdef USB_MSC_SPIKE
-  runUsbMscSpike();
-#endif
-
   HalSystem::checkPanic();
 
   SETTINGS.loadFromFile();
@@ -381,6 +378,13 @@ void setup() {
     }
   }
   I18N.setLanguage(static_cast<Language>(SETTINGS.language));
+
+  // USB Storage Mode boot: the card goes to the host, so skip everything else that reads it.
+  if (consumeUsbStorageModeFlag()) {
+    setupDisplayAndBuiltinFonts();
+    display.setFlipOutput(SETTINGS.flipUi != 0);
+    runUsbStorageMode(renderer);
+  }
   KOREADER_STORE.loadFromFile();
   OPDS_STORE.loadFromFile();
   UITheme::getInstance().reload();
