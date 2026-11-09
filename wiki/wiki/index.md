@@ -36,4 +36,5 @@ The structured routing layer for the wiki. Each entry links to a page with a one
 
 ## Planned
 - [TXT indexing performance](planned/txt-indexing-performance.md) — done in ea452ff; single-pass line breaker and sequential reads cut indexing of a 443 KB unwrapped file from 31.7 s to 2.3 s with identical offsets; measurements and left-out work
+- [USB Storage Mode](planned/usb-storage-mode.md) — in progress, spike (branch usb-drive); home-screen item that reboots into a dedicated read/write USB mass-storage mode with nothing shared; status screen with mount status, exit lock, risks (hardware CDC to TinyUSB switch), verification
 - [Fast, high-quality page render](planned/fast-quality-page-render.md) — in progress (steps 1–5 implemented, 3–5 pending visual check: Quality 1.34→0.35 s, real grays in Standard); measured panel timings (22–34 ms/frame, 0.7–1.3 s per turn), dithered AA in Standard, sweep cost; plan to ~170 ms with real grays
