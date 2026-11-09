@@ -1,0 +1,11 @@
+# Example repo list for scripts/pull-repos.sh
+#
+# One absolute path per line. Blank lines and lines starting with '#' are
+# ignored. List every code repository this wiki tracks — a single repo for a
+# monorepo project, or several for a multi-repo one.
+#
+# Copy this file to repos.txt at the repo root (which is what pull-repos.sh
+# reads by default, and which is gitignored since the paths are machine-local).
+#
+# /Users/you/workspace/project/service-a
+# /Users/you/workspace/project/service-b

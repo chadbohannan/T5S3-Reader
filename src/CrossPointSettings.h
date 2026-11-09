@@ -224,6 +224,9 @@ class CrossPointSettings {
   uint8_t refreshFrequency = REFRESH_15;
   // Reader-only display mode: quality, standard, or fast.
   uint8_t readerDisplayMode = READER_DISPLAY_STANDARD;
+  // Slice "wipe" animation on reader page turns (T5S3 only). Off by default:
+  // it costs ~200-400 ms per turn (see wiki planned/fast-quality-page-render).
+  uint8_t pageTurnAnimation = 0;
   uint8_t hyphenationEnabled = 0;
 
   // Reader screen margin settings

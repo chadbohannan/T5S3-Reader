@@ -67,7 +67,7 @@ inline HalDisplay::RefreshMode getReaderDisplayRefreshMode() {
 }
 
 inline bool shouldAnimatePageTurn() {
-  return SETTINGS.readerDisplayMode != CrossPointSettings::READER_DISPLAY_QUALITY;
+  return SETTINGS.pageTurnAnimation && SETTINGS.readerDisplayMode != CrossPointSettings::READER_DISPLAY_QUALITY;
 }
 
 inline bool isPageTurnInputBlocked() {
@@ -77,6 +77,10 @@ inline bool isPageTurnInputBlocked() {
 }
 
 inline void requestPageTurnEffect(const GfxRenderer& renderer, const bool isForwardTurn) {
+  if (!shouldAnimatePageTurn()) {
+    renderer.requestNextDisplayEffect(HalDisplay::EFFECT_NONE);
+    return;
+  }
   switch (SETTINGS.readerDisplayMode) {
     case CrossPointSettings::READER_DISPLAY_FAST:
       renderer.requestNextDisplayEffect(isForwardTurn ? HalDisplay::EFFECT_READER_TURN_FORWARD_FAST

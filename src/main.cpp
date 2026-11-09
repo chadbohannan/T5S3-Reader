@@ -619,6 +619,30 @@ void loop() {
     activityManager.requestUpdate();
   }
 
+#ifdef T5S3_AUTOTURN_MS
+  // Debug build only (-DT5S3_AUTOTURN_MS=<ms>): unattended page-turn benchmark.
+  // In a reader, turn forward every T5S3_AUTOTURN_MS and cycle Standard -> Fast
+  // -> Quality every 10 turns with text anti-aliasing on. The settings are
+  // changed in memory only. Panel timings come from the DSP "Panel update" log.
+  {
+    static unsigned long lastAutoTurn = 0;
+    static uint32_t autoTurns = 0;
+    if (isReaderPage && millis() - lastAutoTurn >= T5S3_AUTOTURN_MS) {
+      static const uint8_t kAutoModes[] = {CrossPointSettings::READER_DISPLAY_STANDARD,
+                                           CrossPointSettings::READER_DISPLAY_FAST,
+                                           CrossPointSettings::READER_DISPLAY_QUALITY};
+      lastAutoTurn = millis();
+      SETTINGS.textAntiAliasing = 1;
+      SETTINGS.readerDisplayMode = kAutoModes[(autoTurns / 10) % 3];
+      LOG_INF("AUTO", "Auto turn %lu: readerDisplayMode=%u", static_cast<unsigned long>(autoTurns),
+              static_cast<unsigned>(SETTINGS.readerDisplayMode));
+      autoTurns++;
+      queueHardwareButtonTap(MappedInputManager::Button::PageForward);
+      lastActivityTime = millis();
+    }
+  }
+#endif
+
   const unsigned long activityStartTime = millis();
   if (hasHardwareButtonTap) {
     mappedInputManager.injectButtonTap(hardwareButtonTap);

@@ -3,16 +3,7 @@
 #include <Board.h>
 
 #if defined(BOARD_T5S3_PRO) || defined(BOARD_T5S3)
-class T5S3M5GfxDisplay;
-
-namespace lgfx {
-inline namespace v1 {
-class LGFX_Sprite;
-namespace epd_mode {
-enum epd_mode_t : uint8_t;
-}
-}
-}  // namespace lgfx
+class T5S3EpdDriver;
 #endif
 
 class HalDisplay {
@@ -92,8 +83,7 @@ class HalDisplay {
 
  private:
 #if defined(BOARD_T5S3_PRO) || defined(BOARD_T5S3)
-  T5S3M5GfxDisplay* gfx = nullptr;
-  lgfx::LGFX_Sprite* panelCanvas = nullptr;
+  T5S3EpdDriver* epd = nullptr;
 #elif defined(BOARD_LILYGO_EPD47_S3)
   uint8_t* epdFrameBuffer = nullptr;
 #endif
@@ -112,12 +102,9 @@ class HalDisplay {
 
   uint8_t* allocatePlane();
 #if defined(BOARD_T5S3_PRO) || defined(BOARD_T5S3)
-  void releaseBackend();
-  bool initializePanelCanvas();
-  void pushPanelCanvas(RefreshMode mode, lgfx::epd_mode::epd_mode_t epdMode);
-  void pushPanelCanvasWithEffect(DisplayEffect effect) const;
-  void renderBwToPanelCanvas() const;
-  void renderGrayToPanelCanvas() const;
+  void convertBwToPanel() const;
+  bool convertGrayToPanel() const;  // returns true if any pixel is gray
+  void pushToPanel(RefreshMode mode, uint8_t panelMode, bool allPixels, bool hasGray, uint32_t convertUs);
 #endif
 };
 

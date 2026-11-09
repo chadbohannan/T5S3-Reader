@@ -65,13 +65,14 @@ inline SettingInfo buildFontFamilySetting(const SdCardFontRegistry* registry) {
   return setting;
 }
 
-// Shared settings list used by both the device settings UI and the web settings API.
-// Each entry has a key (for JSON API) and category (for grouping).
-// ACTION-type entries and entries without a key are device-only.
-inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* registry = nullptr) {
-  static const std::vector<SettingInfo> baseList = [] {
-    std::vector<SettingInfo> v = {
-        // --- Display ---
+// Each section is built in its own non-inlined function. A single brace list
+// of every SettingInfo put all temporaries (~150 B each) on the caller's stack
+// at once, ~8 KB, which overflowed the 8 KB Arduino loopTask stack at boot.
+namespace settings_list_detail {
+
+// Display
+__attribute__((noinline)) inline void appendDisplaySettings(std::vector<SettingInfo>& v) {
+  v.insert(v.end(), {
         SettingInfo::Value(StrId::STR_BACKLIGHT, &CrossPointSettings::backlightLevel, {0, 10, 1}, "backlightLevel",
                            StrId::STR_CAT_DISPLAY),
         SettingInfo::Enum(StrId::STR_SLEEP_SCREEN, &CrossPointSettings::sleepScreen,
@@ -104,9 +105,13 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
                            StrId::STR_THEME_ROUNDEDRAFF},
                           "uiTheme", StrId::STR_CAT_DISPLAY),
         SettingInfo::Toggle(StrId::STR_SUNLIGHT_FADING_FIX, &CrossPointSettings::fadingFix, "fadingFix",
-                            StrId::STR_CAT_DISPLAY),
+                            StrId::STR_CAT_DISPLAY)
+  });
+}
 
-        // --- Reader ---
+// Reader
+__attribute__((noinline)) inline void appendReaderSettings(std::vector<SettingInfo>& v) {
+  v.insert(v.end(), {
         SettingInfo::Enum(StrId::STR_FONT_FAMILY, &CrossPointSettings::fontFamily,
                           {StrId::STR_NOTO_SERIF, StrId::STR_NOTO_SANS}, "fontFamily", StrId::STR_CAT_READER),
         SettingInfo::Enum(StrId::STR_FONT_SIZE, &CrossPointSettings::fontSize,
@@ -134,11 +139,17 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
         SettingInfo::Enum(StrId::STR_READER_DISPLAY_MODE, &CrossPointSettings::readerDisplayMode,
                           {StrId::STR_DISPLAY_QUALITY, StrId::STR_DISPLAY_STANDARD, StrId::STR_DISPLAY_FAST},
                           "readerDisplayMode", StrId::STR_CAT_READER),
+        SettingInfo::Toggle(StrId::STR_PAGE_TURN_ANIMATION, &CrossPointSettings::pageTurnAnimation,
+                            "pageTurnAnimation", StrId::STR_CAT_READER),
         SettingInfo::Enum(StrId::STR_IMAGES, &CrossPointSettings::imageRendering,
                           {StrId::STR_IMAGES_DISPLAY, StrId::STR_IMAGES_PLACEHOLDER, StrId::STR_IMAGES_SUPPRESS},
-                          "imageRendering", StrId::STR_CAT_READER),
+                          "imageRendering", StrId::STR_CAT_READER)
+  });
+}
 
-        // --- Controls ---
+// Controls
+__attribute__((noinline)) inline void appendControlsSettings(std::vector<SettingInfo>& v) {
+  v.insert(v.end(), {
         SettingInfo::Enum(StrId::STR_SIDE_BTN_LAYOUT, &CrossPointSettings::sideButtonLayout,
                           {StrId::STR_PREV_NEXT, StrId::STR_NEXT_PREV}, "sideButtonLayout", StrId::STR_CAT_CONTROLS),
         SettingInfo::Enum(StrId::STR_LONG_PRESS_MENU, &CrossPointSettings::longPressMenuFunction,
@@ -149,9 +160,13 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
                            StrId::STR_LONG_PRESS_BEHAVIOR_ORIENTATION},
                           "longPressButtonBehavior", StrId::STR_CAT_CONTROLS),
         SettingInfo::Toggle(StrId::STR_DOUBLE_CLICK_HOME, &CrossPointSettings::doubleClickHomeMenu,
-                            "doubleClickHomeMenu", StrId::STR_CAT_CONTROLS),
+                            "doubleClickHomeMenu", StrId::STR_CAT_CONTROLS)
+  });
+}
 
-        // --- System ---
+// System
+__attribute__((noinline)) inline void appendSystemSettings(std::vector<SettingInfo>& v) {
+  v.insert(v.end(), {
         SettingInfo::Enum(StrId::STR_TIME_TO_SLEEP, &CrossPointSettings::sleepTimeout,
                           {StrId::STR_MIN_1, StrId::STR_MIN_5, StrId::STR_MIN_10, StrId::STR_MIN_15, StrId::STR_MIN_30},
                           "sleepTimeout", StrId::STR_CAT_SYSTEM),
@@ -170,9 +185,13 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
                             StrId::STR_CAT_SYSTEM),
         SettingInfo::Toggle(StrId::STR_FLIP_UI, &CrossPointSettings::flipUi, "flipUi", StrId::STR_CAT_SYSTEM),
         SettingInfo::Toggle(StrId::STR_RESUME_ON_BOOT, &CrossPointSettings::resumeReaderOnBoot, "resumeReaderOnBoot",
-                            StrId::STR_CAT_SYSTEM),
+                            StrId::STR_CAT_SYSTEM)
+  });
+}
 
-        // --- KOReader Sync (web-only, uses KOReaderCredentialStore) ---
+// KOReader Sync (web-only, uses KOReaderCredentialStore)
+__attribute__((noinline)) inline void appendKoreaderSyncSettings(std::vector<SettingInfo>& v) {
+  v.insert(v.end(), {
         SettingInfo::DynamicString(
             StrId::STR_KOREADER_USERNAME, [] { return KOREADER_STORE.getUsername(); },
             [](const std::string& value) {
@@ -201,9 +220,13 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
               KOREADER_STORE.setMatchMethod(static_cast<DocumentMatchMethod>(value));
               KOREADER_STORE.saveToFile();
             },
-            "koMatchMethod", StrId::STR_KOREADER_SYNC),
+            "koMatchMethod", StrId::STR_KOREADER_SYNC)
+  });
+}
 
-        // --- Status Bar Settings (web-only, uses StatusBarSettingsActivity) ---
+// Status Bar Settings (web-only, uses StatusBarSettingsActivity)
+__attribute__((noinline)) inline void appendStatusBarSettings(std::vector<SettingInfo>& v) {
+  v.insert(v.end(), {
         SettingInfo::Toggle(StrId::STR_CHAPTER_PAGE_COUNT, &CrossPointSettings::statusBarChapterPageCount,
                             "statusBarChapterPageCount", StrId::STR_CUSTOMISE_STATUS_BAR),
         SettingInfo::Toggle(StrId::STR_BOOK_PROGRESS_PERCENTAGE, &CrossPointSettings::statusBarBookProgressPercentage,
@@ -221,8 +244,25 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
                           {StrId::STR_HIDE, StrId::STR_DIR_LEFT, StrId::STR_DIR_RIGHT}, "statusBarClock",
                           StrId::STR_CUSTOMISE_STATUS_BAR),
         SettingInfo::Toggle(StrId::STR_BATTERY, &CrossPointSettings::statusBarBattery, "statusBarBattery",
-                            StrId::STR_CUSTOMISE_STATUS_BAR),
-    };
+                            StrId::STR_CUSTOMISE_STATUS_BAR)
+  });
+}
+
+}  // namespace settings_list_detail
+
+// Shared settings list used by both the device settings UI and the web settings API.
+// Each entry has a key (for JSON API) and category (for grouping).
+// ACTION-type entries and entries without a key are device-only.
+inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* registry = nullptr) {
+  static const std::vector<SettingInfo> baseList = [] {
+    std::vector<SettingInfo> v;
+    v.reserve(64);
+    settings_list_detail::appendDisplaySettings(v);
+    settings_list_detail::appendReaderSettings(v);
+    settings_list_detail::appendControlsSettings(v);
+    settings_list_detail::appendSystemSettings(v);
+    settings_list_detail::appendKoreaderSyncSettings(v);
+    settings_list_detail::appendStatusBarSettings(v);
 
     if (!Board::capabilities().hasBacklight) {
       v.erase(std::remove_if(v.begin(), v.end(), [](const SettingInfo& setting) {

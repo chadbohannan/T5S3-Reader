@@ -4,302 +4,113 @@
 
 #include <Board.h>
 #include <Logging.h>
-#include <M5GFX.h>
-#include <lgfx/v1/platforms/esp32/Bus_EPD.h>
-#include <lgfx/v1/platforms/esp32/Panel_EPD.hpp>
-#include <Wire.h>
 #include <esp_heap_caps.h>
 
-#include <algorithm>
 #include <cstring>
+
+#include "T5S3EpdDriver.h"
 
 // Global HalDisplay instance
 HalDisplay display;
 
 namespace {
-constexpr uint32_t kEpdBusHz = 16000000;
 constexpr uint32_t kMiddleRefreshThreshold = 8;
 constexpr uint32_t kQualityRefreshThreshold = 18;
-constexpr int kDefaultVcomMv = -1600;
-constexpr int kReaderTurnStandardSliceCount = 24;
-constexpr int kReaderTurnFastSliceCount = 30;
-constexpr int kReaderTurnMinSliceHeight = 6;
+constexpr uint8_t kReaderTurnStandardSweepBands = 24;
+constexpr uint8_t kReaderTurnFastSweepBands = 30;
 
-constexpr uint8_t kTpsRegEnable = 0x01;
-constexpr uint8_t kTpsRegVcom = 0x03;
-constexpr uint8_t kTpsRegPowerGood = 0x0F;
-constexpr uint8_t kTpsEnableOutputs = 0x3F;
+using PanelMode = T5S3EpdDriver::Mode;
 
-constexpr uint8_t kGrayBlack = 0x00;
-constexpr uint8_t kGrayDark = 0x55;
-constexpr uint8_t kGrayLight = 0xAA;
-constexpr uint8_t kGrayWhite = 0xFF;
+static_assert(HalDisplay::DISPLAY_WIDTH == T5S3EpdDriver::WIDTH, "panel width mismatch");
+static_assert(HalDisplay::DISPLAY_HEIGHT == T5S3EpdDriver::HEIGHT, "panel height mismatch");
+static_assert(T5S3EpdDriver::ROW_BYTES == HalDisplay::DISPLAY_WIDTH_BYTES * 2, "2 bpp row is two 1 bpp rows");
 
-bool writeTpsRegister(const uint8_t reg, const uint8_t* data, const size_t len) {
-  Board::ScopedI2CLock lock;
-  Wire.beginTransmission(T5S3_TPS65185_ADDR);
-  Wire.write(reg);
-  if (data != nullptr && len > 0) {
-    Wire.write(data, len);
+// 1 bpp -> 2 bpp helpers. spread[b] puts bit (7 - p) of b, i.e. pixel p
+// (MSB first), at bit 14 - 2p: the low bit of that pixel's 2-bit level.
+uint16_t gSpread[256];
+uint8_t gReverse[256];
+bool gTablesReady = false;
+
+void buildConversionTables() {
+  if (gTablesReady) {
+    return;
   }
-  return Wire.endTransmission() == 0;
+  for (int b = 0; b < 256; ++b) {
+    uint16_t spread = 0;
+    uint8_t reversed = 0;
+    for (int bit = 0; bit < 8; ++bit) {
+      if (b & (1 << bit)) {
+        spread |= static_cast<uint16_t>(1u << (bit * 2));
+        reversed |= static_cast<uint8_t>(0x80 >> bit);
+      }
+    }
+    gSpread[b] = spread;
+    gReverse[b] = reversed;
+  }
+  gTablesReady = true;
 }
 
-bool writeTpsRegister8(const uint8_t reg, const uint8_t value) { return writeTpsRegister(reg, &value, 1); }
-
-bool readTpsRegister(const uint8_t reg, uint8_t* data, const size_t len) {
-  if (data == nullptr || len == 0) {
-    return false;
+// Writes 8 pixels (as a 16-bit 2 bpp value, MSB first) into a 2 bpp row.
+inline void storePixels(uint8_t* row, const uint16_t byteX, const uint16_t value, const bool flip) {
+  if (flip) {
+    // Caller passed the bit-reversed source, so `value` is already in
+    // mirrored pixel order.
+    const uint16_t dst = T5S3EpdDriver::ROW_BYTES - 2 - byteX * 2;
+    row[dst] = static_cast<uint8_t>(value >> 8);
+    row[dst + 1] = static_cast<uint8_t>(value);
+  } else {
+    row[byteX * 2] = static_cast<uint8_t>(value >> 8);
+    row[byteX * 2 + 1] = static_cast<uint8_t>(value);
   }
-
-  Board::ScopedI2CLock lock;
-  Wire.beginTransmission(T5S3_TPS65185_ADDR);
-  Wire.write(reg);
-  if (Wire.endTransmission(false) != 0) {
-    return false;
-  }
-
-  const uint8_t requested = static_cast<uint8_t>(len);
-  if (Wire.requestFrom(static_cast<uint8_t>(T5S3_TPS65185_ADDR), requested) != requested) {
-    while (Wire.available()) {
-      Wire.read();
-    }
-    return false;
-  }
-
-  for (size_t i = 0; i < len; ++i) {
-    data[i] = Wire.read();
-  }
-  return true;
 }
 
-bool waitForPcaPinHigh(const uint8_t pin, const uint32_t timeoutMs) {
-  const uint32_t start = millis();
-  bool high = false;
-  while (millis() - start < timeoutMs) {
-    if (Board::readPca9535Pin(pin, &high) && high) {
-      return true;
-    }
-    delay(1);
-  }
-  return false;
-}
-
-bool waitForTpsReady(const uint32_t timeoutMs) {
-  const uint32_t start = millis();
-  uint8_t powerGood = 0;
-  while (millis() - start < timeoutMs) {
-    if (readTpsRegister(kTpsRegPowerGood, &powerGood, 1) && (powerGood & 0xFA) == 0xFA) {
-      return true;
-    }
-    delay(1);
-  }
-  return false;
-}
-
-class T5S3BusEPD : public lgfx::Bus_EPD {
- public:
-  bool init() override {
-    if (!preparePowerPins()) {
-      LOG_ERR("DSP", "Failed to configure PCA9535 power pins");
-      return false;
-    }
-    return lgfx::Bus_EPD::init();
-  }
-
-  bool powerControl(const bool powerOn) override {
-    if (_pwr_on == powerOn) {
-      return true;
-    }
-
-    wait();
-    if (powerOn) {
-      return powerOnSequence();
-    }
-
-    powerOffSequence();
-    return true;
-  }
-
- private:
-  bool preparePowerPins() {
-    // Keep the full expander setup sequence on the bus atomically. The render
-    // task can power-cycle EPD rails while the main loop is polling RTC/touch.
-    Board::ScopedI2CLock busLock;
-    bool ok = true;
-    ok &= Board::setPca9535PinMode(PCA9535_IO10_EP_OE, OUTPUT);
-    ok &= Board::setPca9535PinMode(PCA9535_IO11_EP_MODE, OUTPUT);
-    ok &= Board::setPca9535PinMode(PCA9535_IO13_TPS_PWRUP, OUTPUT);
-    ok &= Board::setPca9535PinMode(PCA9535_IO14_VCOM_CTRL, OUTPUT);
-    ok &= Board::setPca9535PinMode(PCA9535_IO15_TPS_WAKEUP, OUTPUT);
-    ok &= Board::setPca9535PinMode(PCA9535_IO16_TPS_PWR_GOOD, INPUT);
-    ok &= Board::setPca9535PinMode(PCA9535_IO17_TPS_INT, INPUT);
-
-    ok &= Board::writePca9535Pin(PCA9535_IO10_EP_OE, false);
-    ok &= Board::writePca9535Pin(PCA9535_IO11_EP_MODE, false);
-    ok &= Board::writePca9535Pin(PCA9535_IO13_TPS_PWRUP, false);
-    ok &= Board::writePca9535Pin(PCA9535_IO14_VCOM_CTRL, false);
-    ok &= Board::writePca9535Pin(PCA9535_IO15_TPS_WAKEUP, false);
-    return ok;
-  }
-
-  bool powerOnSequence() {
-    // Hold the I2C bus for the whole EPD power-on sequence so RTC/touch reads
-    // cannot interleave with the PCA9535/TPS65185 transactions.
-    Board::ScopedI2CLock busLock;
-    const auto& cfg = config();
-
-    lgfx::gpio_hi(cfg.pin_spv);
-
-    bool ok = true;
-    ok &= Board::writePca9535Pin(PCA9535_IO10_EP_OE, true);
-    ok &= Board::writePca9535Pin(PCA9535_IO11_EP_MODE, true);
-    ok &= Board::writePca9535Pin(PCA9535_IO15_TPS_WAKEUP, true);
-    ok &= Board::writePca9535Pin(PCA9535_IO13_TPS_PWRUP, true);
-    ok &= Board::writePca9535Pin(PCA9535_IO14_VCOM_CTRL, true);
-    if (!ok) {
-      LOG_ERR("DSP", "Failed to assert EPD power rails");
-      powerOffSequence();
-      return false;
-    }
-
-    delay(1);
-    if (!waitForPcaPinHigh(PCA9535_IO16_TPS_PWR_GOOD, 400)) {
-      LOG_ERR("DSP", "TPS65185 power-good pin did not assert");
-      powerOffSequence();
-      return false;
-    }
-
-    if (!writeTpsRegister8(kTpsRegEnable, kTpsEnableOutputs)) {
-      LOG_ERR("DSP", "TPS65185 enable write failed");
-      powerOffSequence();
-      return false;
-    }
-
-    const uint16_t vcomValue = static_cast<uint16_t>(-kDefaultVcomMv / 10);
-    const uint8_t vcomBytes[2] = {
-        static_cast<uint8_t>(vcomValue & 0xFF),
-        static_cast<uint8_t>(vcomValue >> 8),
-    };
-    if (!writeTpsRegister(kTpsRegVcom, vcomBytes, sizeof(vcomBytes))) {
-      LOG_ERR("DSP", "TPS65185 VCOM write failed");
-      powerOffSequence();
-      return false;
-    }
-
-    if (!waitForTpsReady(400)) {
-      LOG_ERR("DSP", "TPS65185 rails never reached ready state");
-      powerOffSequence();
-      return false;
-    }
-
-    _pwr_on = true;
-    return true;
-  }
-
-  void powerOffSequence() {
-    Board::ScopedI2CLock busLock;
-    const auto& cfg = config();
-
-    Board::writePca9535Pin(PCA9535_IO10_EP_OE, false);
-    Board::writePca9535Pin(PCA9535_IO11_EP_MODE, false);
-    Board::writePca9535Pin(PCA9535_IO13_TPS_PWRUP, false);
-    Board::writePca9535Pin(PCA9535_IO14_VCOM_CTRL, false);
-    delay(1);
-    Board::writePca9535Pin(PCA9535_IO15_TPS_WAKEUP, false);
-
-    lgfx::gpio_lo(cfg.pin_spv);
-    _pwr_on = false;
-  }
-};
-
-uint8_t grayscaleValueForBit(const uint8_t baseByte, const uint8_t lsbByte, const uint8_t msbByte, const uint8_t mask) {
-  if (baseByte & mask) {
-    return kGrayWhite;
-  }
-
-  const bool lsb = (lsbByte & mask) != 0;
-  const bool msb = (msbByte & mask) != 0;
-
-  if (msb && lsb) {
-    return kGrayDark;
-  }
-  if (msb) {
-    return kGrayLight;
-  }
-  if (lsb) {
-    return kGrayDark;
-  }
-  return kGrayBlack;
-}
-
-lgfx::epd_mode::epd_mode_t epdModeForRefreshMode(const HalDisplay::RefreshMode mode) {
+const char* refreshModeName(const HalDisplay::RefreshMode mode) {
   switch (mode) {
     case HalDisplay::FULL_REFRESH:
-      return lgfx::epd_mode::epd_quality;
+      return "FULL";
     case HalDisplay::HALF_REFRESH:
-      return lgfx::epd_mode::epd_text;
+      return "HALF";
     case HalDisplay::BALANCED_REFRESH:
-      return lgfx::epd_mode::epd_fast;
+      return "BALANCED";
     case HalDisplay::FAST_REFRESH:
     default:
-      return lgfx::epd_mode::epd_fast;
+      return "FAST";
+  }
+}
+
+const char* panelModeName(const PanelMode mode) {
+  switch (mode) {
+    case PanelMode::Quality:
+      return "quality";
+    case PanelMode::Text:
+      return "text";
+    case PanelMode::Gray:
+      return "gray";
+    case PanelMode::Fastest:
+      return "fastest";
+    default:
+      return "?";
+  }
+}
+
+// Panel waveform for a grayscale (anti-aliased) push.
+PanelMode panelModeForGray(const HalDisplay::RefreshMode mode) {
+  switch (mode) {
+    case HalDisplay::FULL_REFRESH:
+      return PanelMode::Quality;
+    case HalDisplay::HALF_REFRESH:
+      return PanelMode::Text;
+    case HalDisplay::BALANCED_REFRESH:
+    case HalDisplay::FAST_REFRESH:
+    default:
+      return PanelMode::Gray;
   }
 }
 }  // namespace
 
-class T5S3M5GfxDisplay : public lgfx::LGFX_Device {
- public:
-  T5S3M5GfxDisplay() {
-    auto busCfg = bus_.config();
-    busCfg.bus_speed = kEpdBusHz;
-    busCfg.pin_data[0] = EP_D0;
-    busCfg.pin_data[1] = EP_D1;
-    busCfg.pin_data[2] = EP_D2;
-    busCfg.pin_data[3] = EP_D3;
-    busCfg.pin_data[4] = EP_D4;
-    busCfg.pin_data[5] = EP_D5;
-    busCfg.pin_data[6] = EP_D6;
-    busCfg.pin_data[7] = EP_D7;
-    busCfg.pin_pwr = T5S3_LORA_CS;  // Required by esp_lcd i80 API, not used for real power control.
-    busCfg.pin_sph = EP_STH;
-    busCfg.pin_spv = EP_STV;
-    busCfg.pin_oe = T5S3_LORA_CS;   // Dummy direct GPIO; OE itself is handled through the PCA9535.
-    busCfg.pin_le = EP_LEH;
-    busCfg.pin_cl = EP_CKH;
-    busCfg.pin_ckv = EP_CKV;
-    busCfg.bus_width = 8;
-    bus_.config(busCfg);
-
-    panel_.setBus(&bus_);
-
-    auto detailCfg = panel_.config_detail();
-    detailCfg.line_padding = 8;
-    panel_.config_detail(detailCfg);
-
-    auto panelCfg = panel_.config();
-    panelCfg.memory_width = HalDisplay::DISPLAY_WIDTH;
-    panelCfg.panel_width = HalDisplay::DISPLAY_WIDTH;
-    panelCfg.memory_height = HalDisplay::DISPLAY_HEIGHT;
-    panelCfg.panel_height = HalDisplay::DISPLAY_HEIGHT;
-    panelCfg.offset_rotation = 0;
-    panelCfg.offset_x = 0;
-    panelCfg.offset_y = 0;
-    panelCfg.bus_shared = false;
-    panel_.config(panelCfg);
-
-    setPanel(&panel_);
-  }
-
- private:
-  T5S3BusEPD bus_;
-  lgfx::Panel_EPD panel_;
-};
-
 HalDisplay::HalDisplay() = default;
 
 HalDisplay::~HalDisplay() {
-  releaseBackend();
   free(frameBuffer);
   free(grayscaleLsbBuffer);
   free(grayscaleMsbBuffer);
@@ -314,30 +125,9 @@ uint8_t* HalDisplay::allocatePlane() {
   return plane;
 }
 
-void HalDisplay::releaseBackend() {
-  delete panelCanvas;
-  panelCanvas = nullptr;
-
-  delete gfx;
-  gfx = nullptr;
-
-  displayReady = false;
-}
-
-bool HalDisplay::initializePanelCanvas() {
-  panelCanvas = new lgfx::LGFX_Sprite(gfx);
-  if (!panelCanvas) {
-    return false;
-  }
-
-  panelCanvas->setPsram(true);
-  panelCanvas->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
-  return panelCanvas->createSprite(DISPLAY_WIDTH, DISPLAY_HEIGHT) != nullptr;
-}
-
 void HalDisplay::begin() {
-  releaseBackend();
   Board::beginI2C();
+  buildConversionTables();
 
   if (!frameBuffer) {
     frameBuffer = allocatePlane();
@@ -347,31 +137,15 @@ void HalDisplay::begin() {
     return;
   }
 
-  gfx = new T5S3M5GfxDisplay();
-  if (!gfx) {
-    LOG_ERR("DSP", "Failed to allocate M5GFX device");
-    return;
+  if (!epd) {
+    epd = new T5S3EpdDriver();
   }
-
-  if (!gfx->init()) {
-    LOG_ERR("DSP", "M5GFX init failed");
-    releaseBackend();
-    return;
-  }
-
-  gfx->setRotation(0);
-  gfx->setColorDepth(lgfx::color_depth_t::grayscale_8bit);
-  gfx->setEpdMode(lgfx::epd_mode::epd_fastest);
-  gfx->powerSave(false);
-
-  if (!initializePanelCanvas()) {
-    LOG_ERR("DSP", "Failed to create M5GFX panel canvas");
-    releaseBackend();
+  if (!epd || !epd->begin()) {
+    LOG_ERR("DSP", "EPD driver init failed");
     return;
   }
 
   clearScreen(0xFF);
-  memset(panelCanvas->getBuffer(), kGrayWhite, static_cast<size_t>(DISPLAY_WIDTH) * DISPLAY_HEIGHT);
 
   displayReady = true;
   forceFullRefresh = true;
@@ -380,7 +154,7 @@ void HalDisplay::begin() {
   refreshCycleCount = 0;
   grayscaleBaseCaptured = false;
 
-  LOG_INF("DSP", "M5GFX T5S3 display initialized: %ux%u visible, %ux%u scan", VISIBLE_WIDTH, VISIBLE_HEIGHT,
+  LOG_INF("DSP", "T5S3 EPD driver initialized: %ux%u visible, %ux%u scan", VISIBLE_WIDTH, VISIBLE_HEIGHT,
           DISPLAY_WIDTH, DISPLAY_HEIGHT);
 }
 
@@ -440,159 +214,105 @@ void HalDisplay::drawImageTransparent(const uint8_t* imageData, uint16_t x, uint
   }
 }
 
-void HalDisplay::renderBwToPanelCanvas() const {
-  if (!panelCanvas || !frameBuffer) {
-    return;
-  }
-
-  auto* grayBuffer = static_cast<uint8_t*>(panelCanvas->getBuffer());
-  if (!grayBuffer) {
-    return;
-  }
-
+// 1 bpp framebuffer (bit set = white) -> 2 bpp panel target (black / white).
+void HalDisplay::convertBwToPanel() const {
+  uint8_t* target = epd->target();
   for (uint16_t y = 0; y < DISPLAY_HEIGHT; ++y) {
-    const uint8_t* srcRow = frameBuffer + static_cast<uint32_t>(y) * DISPLAY_WIDTH_BYTES;
-    uint8_t* dstRow = grayBuffer + static_cast<uint32_t>(y) * DISPLAY_WIDTH;
-    // When flipped, write into the 180°-mirrored destination row/column.
-    uint8_t* dstRowFlipped = grayBuffer + static_cast<uint32_t>(DISPLAY_HEIGHT - 1 - y) * DISPLAY_WIDTH;
-    for (uint16_t byteX = 0; byteX < DISPLAY_WIDTH_BYTES; ++byteX) {
-      const uint8_t srcByte = srcRow[byteX];
-      for (uint8_t bit = 0; bit < 8; ++bit) {
-        const uint16_t lx = byteX * 8 + bit;
-        const uint8_t value = (srcByte & (0x80 >> bit)) ? kGrayWhite : kGrayBlack;
-        if (flipOutput) {
-          dstRowFlipped[DISPLAY_WIDTH - 1 - lx] = value;
-        } else {
-          dstRow[lx] = value;
-        }
-      }
+    const uint8_t* src = frameBuffer + static_cast<uint32_t>(y) * DISPLAY_WIDTH_BYTES;
+    const uint16_t dstY = flipOutput ? (DISPLAY_HEIGHT - 1 - y) : y;
+    uint8_t* dst = target + static_cast<uint32_t>(dstY) * T5S3EpdDriver::ROW_BYTES;
+    for (uint16_t x = 0; x < DISPLAY_WIDTH_BYTES; ++x) {
+      const uint8_t bits = flipOutput ? gReverse[src[x]] : src[x];
+      storePixels(dst, x, static_cast<uint16_t>(gSpread[bits] * 3), flipOutput);
     }
   }
 }
 
-void HalDisplay::renderGrayToPanelCanvas() const {
-  if (!panelCanvas || !grayscaleLsbBuffer || !grayscaleMsbBuffer || !grayscaleBaseBuffer) {
-    return;
-  }
-
-  auto* grayBuffer = static_cast<uint8_t*>(panelCanvas->getBuffer());
-  if (!grayBuffer) {
-    return;
-  }
-
+// Base / LSB / MSB planes -> 2 bpp panel target. Levels: white if the base
+// (BW) bit is set; otherwise dark if LSB, light if only MSB, else black
+// (same mapping as the previous 8-bit canvas path).
+bool HalDisplay::convertGrayToPanel() const {
+  uint8_t* target = epd->target();
+  uint8_t grayBits = 0;
   for (uint16_t y = 0; y < DISPLAY_HEIGHT; ++y) {
-    const uint8_t* baseRow = grayscaleBaseBuffer + static_cast<uint32_t>(y) * DISPLAY_WIDTH_BYTES;
-    const uint8_t* lsbRow = grayscaleLsbBuffer + static_cast<uint32_t>(y) * DISPLAY_WIDTH_BYTES;
-    const uint8_t* msbRow = grayscaleMsbBuffer + static_cast<uint32_t>(y) * DISPLAY_WIDTH_BYTES;
-    uint8_t* dstRow = grayBuffer + static_cast<uint32_t>(y) * DISPLAY_WIDTH;
-    // When flipped, write into the 180°-mirrored destination row/column.
-    uint8_t* dstRowFlipped = grayBuffer + static_cast<uint32_t>(DISPLAY_HEIGHT - 1 - y) * DISPLAY_WIDTH;
-
-    for (uint16_t byteX = 0; byteX < DISPLAY_WIDTH_BYTES; ++byteX) {
-      const uint8_t baseByte = baseRow[byteX];
-      const uint8_t lsbByte = lsbRow[byteX];
-      const uint8_t msbByte = msbRow[byteX];
-
-      for (uint8_t bit = 0; bit < 8; ++bit) {
-        const uint8_t mask = static_cast<uint8_t>(0x80 >> bit);
-        const uint16_t lx = byteX * 8 + bit;
-        const uint8_t value = grayscaleValueForBit(baseByte, lsbByte, msbByte, mask);
-        if (flipOutput) {
-          dstRowFlipped[DISPLAY_WIDTH - 1 - lx] = value;
-        } else {
-          dstRow[lx] = value;
-        }
+    const uint32_t srcOffset = static_cast<uint32_t>(y) * DISPLAY_WIDTH_BYTES;
+    const uint8_t* baseRow = grayscaleBaseBuffer + srcOffset;
+    const uint8_t* lsbRow = grayscaleLsbBuffer + srcOffset;
+    const uint8_t* msbRow = grayscaleMsbBuffer + srcOffset;
+    const uint16_t dstY = flipOutput ? (DISPLAY_HEIGHT - 1 - y) : y;
+    uint8_t* dst = target + static_cast<uint32_t>(dstY) * T5S3EpdDriver::ROW_BYTES;
+    for (uint16_t x = 0; x < DISPLAY_WIDTH_BYTES; ++x) {
+      const uint8_t base = baseRow[x];
+      const uint8_t lsb = lsbRow[x];
+      const uint8_t msb = msbRow[x];
+      uint8_t hi = base | (msb & static_cast<uint8_t>(~lsb));
+      uint8_t lo = base | lsb;
+      grayBits |= static_cast<uint8_t>(~base) & (lsb | msb);
+      if (flipOutput) {
+        hi = gReverse[hi];
+        lo = gReverse[lo];
       }
+      storePixels(dst, x, static_cast<uint16_t>((gSpread[hi] << 1) | gSpread[lo]), flipOutput);
     }
   }
+  return grayBits != 0;
 }
 
-void HalDisplay::pushPanelCanvasWithEffect(const DisplayEffect effect) const {
-  if (!gfx || !panelCanvas) {
-    return;
-  }
+void HalDisplay::pushToPanel(const RefreshMode mode, const uint8_t panelMode, const bool allPixels,
+                             const bool hasGray, const uint32_t convertUs) {
+  T5S3EpdDriver::UpdateRequest request;
+  request.mode = static_cast<PanelMode>(panelMode);
+  request.allPixels = allPixels;
+  request.hasGrayTargets = hasGray;
 
-  if (!panelCanvas->getBuffer()) {
-    panelCanvas->pushSprite(0, 0);
-    return;
-  }
-
-  int preferredSliceCount = 0;
-  int slicesPerBatch = 1;
-  bool reverse = false;
+  const DisplayEffect effect = (mode == FULL_REFRESH) ? EFFECT_NONE : pendingDisplayEffect;
   switch (effect) {
     case EFFECT_READER_TURN_FORWARD_STANDARD:
-      preferredSliceCount = kReaderTurnStandardSliceCount;
-      slicesPerBatch = 2;
-      reverse = false;
-      break;
     case EFFECT_READER_TURN_BACKWARD_STANDARD:
-      preferredSliceCount = kReaderTurnStandardSliceCount;
-      slicesPerBatch = 2;
-      reverse = true;
+      request.sweepBands = kReaderTurnStandardSweepBands;
       break;
     case EFFECT_READER_TURN_FORWARD_FAST:
-      preferredSliceCount = kReaderTurnFastSliceCount;
-      slicesPerBatch = 3;
-      reverse = false;
-      break;
     case EFFECT_READER_TURN_BACKWARD_FAST:
-      preferredSliceCount = kReaderTurnFastSliceCount;
-      slicesPerBatch = 3;
-      reverse = true;
+      request.sweepBands = kReaderTurnFastSweepBands;
       break;
     case EFFECT_NONE:
     default:
-      panelCanvas->pushSprite(0, 0);
-      return;
+      break;
   }
+  // Physical rows low -> high read as right -> left in portrait: "next page".
+  request.sweepReverse =
+      effect == EFFECT_READER_TURN_BACKWARD_STANDARD || effect == EFFECT_READER_TURN_BACKWARD_FAST;
 
-  const int maxSliceCount = std::max(1, DISPLAY_HEIGHT / kReaderTurnMinSliceHeight);
-  const int sliceCount = std::max(1, std::min(preferredSliceCount, maxSliceCount));
-  const int sliceHeight = std::max(1, DISPLAY_HEIGHT / sliceCount);
-  const int batchSize = std::max(1, slicesPerBatch);
+  const uint32_t tStart = micros();
+  epd->start(request);
+  epd->wait();
+  const uint32_t tDone = micros();
 
-  // The panel canvas is stored in physical scan orientation (960x540).
-  // Sweeping physical Y from low->high maps to logical right->left in portrait,
-  // which feels like a "next page" reveal. The reverse sweep gives prev page.
-  for (int i = 0; i < sliceCount; ++i) {
-    const int sliceIndex = reverse ? (sliceCount - 1 - i) : i;
-    const int startRow = sliceIndex * sliceHeight;
-    const int currentSliceHeight =
-        (sliceIndex == sliceCount - 1) ? (DISPLAY_HEIGHT - startRow) : std::min(sliceHeight, DISPLAY_HEIGHT - startRow);
-    if (currentSliceHeight <= 0) {
-      continue;
-    }
-
-    gfx->setClipRect(0, startRow, DISPLAY_WIDTH, currentSliceHeight);
-    panelCanvas->pushSprite(gfx, 0, 0);
-    // if (((i + 1) % batchSize) == 0 || i == sliceCount - 1) {
-    //   gfx->waitDisplay();
-    // }
-  }
-  gfx->clearClipRect();
-}
-
-void HalDisplay::pushPanelCanvas(const RefreshMode mode, const lgfx::epd_mode::epd_mode_t epdMode) {
-  gfx->waitDisplay();
-  gfx->setEpdMode(epdMode);
-
-  const DisplayEffect effect = (mode == FULL_REFRESH) ? EFFECT_NONE : pendingDisplayEffect;
-  if (effect == EFFECT_NONE) {
-    panelCanvas->pushSprite(0, 0);
-  } else {
-    pushPanelCanvasWithEffect(effect);
-  }
-  gfx->waitDisplay();
+  const auto stats = epd->lastStats();
+  LOG_DBG("DSP",
+          "Panel update: mode=%s panel=%s all=%d gray=%d effect=%d convert=%lums wait=%lums power_on=%lums "
+          "rails_held=%d frames=%lu waveform=%lu frame_avg=%luus blit=%lums copy=%lums bus=%lums class=%lums cpu=%luMHz total=%lums",
+          refreshModeName(mode), panelModeName(request.mode), stats.allPixels ? 1 : 0, hasGray ? 1 : 0,
+          static_cast<int>(effect), static_cast<unsigned long>(convertUs / 1000),
+          static_cast<unsigned long>((tDone - tStart) / 1000), static_cast<unsigned long>(stats.powerOnUs / 1000),
+          stats.railsWereOn ? 1 : 0, static_cast<unsigned long>(stats.frames),
+          static_cast<unsigned long>(stats.waveformFrames), static_cast<unsigned long>(stats.frameAvgUs),
+          static_cast<unsigned long>(stats.blitUs / 1000), static_cast<unsigned long>(stats.copyUs / 1000),
+          static_cast<unsigned long>(stats.busUs / 1000), static_cast<unsigned long>(stats.classUs / 1000),
+          static_cast<unsigned long>(stats.cpuMhz),
+          static_cast<unsigned long>((tDone - tStart + convertUs) / 1000));
 }
 
 void HalDisplay::displayBuffer(HalDisplay::RefreshMode mode, bool turnOffScreen) {
-  if (!displayReady || !gfx || !panelCanvas) {
+  if (!displayReady || !epd) {
     return;
   }
   (void)turnOffScreen;
 
-  renderBwToPanelCanvas();
+  epd->wait();
+  const uint32_t tConvert = micros();
+  convertBwToPanel();
+  const uint32_t convertUs = micros() - tConvert;
 
   if (forcedRefreshPending && (mode == FAST_REFRESH || mode == BALANCED_REFRESH)) {
     LOG_DBG("DSP", "Forcing requested refresh mode for next display update");
@@ -603,30 +323,32 @@ void HalDisplay::displayBuffer(HalDisplay::RefreshMode mode, bool turnOffScreen)
     mode = FULL_REFRESH;
   }
 
-  lgfx::epd_mode::epd_mode_t epdMode = lgfx::epd_mode::epd_fastest;
+  PanelMode panelMode = PanelMode::Fastest;
+  bool allPixels = false;
   if (mode == FULL_REFRESH) {
-    epdMode = lgfx::epd_mode::epd_quality;
+    panelMode = PanelMode::Quality;
+    allPixels = true;
     refreshCycleCount = 0;
   } else if (mode == HALF_REFRESH) {
-    epdMode = lgfx::epd_mode::epd_text;
+    panelMode = PanelMode::Text;
     refreshCycleCount = 0;
   } else if (mode == BALANCED_REFRESH) {
-    epdMode = lgfx::epd_mode::epd_fast;
+    panelMode = PanelMode::Gray;
     refreshCycleCount = 0;
   } else {
     const bool useQualityMode = refreshCycleCount >= kQualityRefreshThreshold;
     const bool useMiddleMode = !useQualityMode && refreshCycleCount >= kMiddleRefreshThreshold &&
                                (refreshCycleCount % kMiddleRefreshThreshold) == 0;
     if (useQualityMode) {
-      epdMode = lgfx::epd_mode::epd_quality;
+      panelMode = PanelMode::Quality;
       refreshCycleCount = 0;
     } else {
-      epdMode = useMiddleMode ? lgfx::epd_mode::epd_fast : lgfx::epd_mode::epd_fastest;
+      panelMode = useMiddleMode ? PanelMode::Gray : PanelMode::Fastest;
       refreshCycleCount++;
     }
   }
 
-  pushPanelCanvas(mode, epdMode);
+  pushToPanel(mode, static_cast<uint8_t>(panelMode), allPixels, false, convertUs);
 
   forceFullRefresh = false;
   forcedRefreshPending = false;
@@ -655,10 +377,8 @@ void HalDisplay::requestNextDisplayEffect(const DisplayEffect effect) { pendingD
 void HalDisplay::suppressInitialFullRefresh() { forceFullRefresh = false; }
 
 void HalDisplay::deepSleep() {
-  if (gfx) {
-    gfx->waitDisplay();
-    gfx->powerSave(true);
-    gfx->sleep();
+  if (epd) {
+    epd->powerDown();
   }
   Board::deinitForSleep();
 }
@@ -719,7 +439,7 @@ void HalDisplay::cleanupGrayscaleBuffers(const uint8_t* bwBuffer) {
 }
 
 void HalDisplay::displayGrayBuffer(HalDisplay::RefreshMode mode) {
-  if (!displayReady || !gfx || !panelCanvas || !grayscaleLsbBuffer || !grayscaleMsbBuffer) {
+  if (!displayReady || !epd || !grayscaleLsbBuffer || !grayscaleMsbBuffer) {
     return;
   }
 
@@ -731,7 +451,10 @@ void HalDisplay::displayGrayBuffer(HalDisplay::RefreshMode mode) {
     return;
   }
 
-  renderGrayToPanelCanvas();
+  epd->wait();
+  const uint32_t tConvert = micros();
+  const bool hasGray = convertGrayToPanel();
+  const uint32_t convertUs = micros() - tConvert;
 
   if (forcedRefreshPending && (mode == FAST_REFRESH || mode == BALANCED_REFRESH)) {
     LOG_DBG("DSP", "Forcing requested refresh mode for next grayscale update");
@@ -742,7 +465,7 @@ void HalDisplay::displayGrayBuffer(HalDisplay::RefreshMode mode) {
     mode = FULL_REFRESH;
   }
 
-  pushPanelCanvas(mode, epdModeForRefreshMode(mode));
+  pushToPanel(mode, static_cast<uint8_t>(panelModeForGray(mode)), mode == FULL_REFRESH, hasGray, convertUs);
 
   refreshCycleCount = 0;
   forcedRefreshPending = false;
