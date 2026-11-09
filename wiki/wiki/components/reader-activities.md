@@ -1,6 +1,6 @@
 # Reader activities
 
-The reader is a group of [activities](activity.md) in `src/activities/reader/`. `ReaderActivity` is a dispatcher: it picks a format-specific reader and replaces itself with it. The format readers own page turning, progress and their sub-menus. Synced against T5S3-Reader@`f460af3` as of 2026-11, except the TXT paragraph, which describes branch `index-perf`.
+The reader is a group of [activities](activity.md) in `src/activities/reader/`. `ReaderActivity` is a dispatcher: it picks a format-specific reader and replaces itself with it. The format readers own page turning, progress and their sub-menus. Synced against T5S3-Reader@`f460af3` as of 2026-11, except the TXT paragraph, which describes commit `ea452ff`.
 
 ## Dispatch
 

@@ -1,6 +1,6 @@
 # TXT indexing performance
 
-**Status: done on branch `index-perf` (commit SHA to be added after the commit).** Indexing the 443,403-byte unwrapped `frankenstein.txt` fell from 31.7 s to 2.3 s on a T5S3 with identical page offsets. The lasting facts are on [reader activities](../components/reader-activities.md) and [GfxRenderer](../components/gfx-renderer.md); this page keeps the evidence, the measurements and the work that was left out.
+**Status: done in `ea452ff` (squashed from branch `index-perf`).** Indexing the 443,403-byte unwrapped `frankenstein.txt` fell from 31.7 s to 2.3 s on a T5S3 with identical page offsets. The lasting facts are on [reader activities](../components/reader-activities.md) and [GfxRenderer](../components/gfx-renderer.md); this page keeps the evidence, the measurements and the work that was left out.
 
 ## Observation
 
