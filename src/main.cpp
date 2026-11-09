@@ -326,6 +326,10 @@ bool shouldResumeReaderOnBoot() {
          !mappedInputManager.isPressed(MappedInputManager::Button::Back) && APP_STATE.readerActivityLoadCount == 0;
 }
 
+#ifdef USB_MSC_SPIKE
+[[noreturn]] void runUsbMscSpike();
+#endif
+
 void setup() {
   t1 = millis();
 
@@ -354,6 +358,10 @@ void setup() {
     activityManager.goToFullScreenMessage("SD card error", EpdFontFamily::BOLD);
     return;
   }
+
+#ifdef USB_MSC_SPIKE
+  runUsbMscSpike();
+#endif
 
   HalSystem::checkPanic();
 

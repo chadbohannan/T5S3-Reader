@@ -1,6 +1,6 @@
 # USB Storage Mode
 
-**Status: in progress, spike started 2026-11-09 (branch `usb-drive`).** A "USB Storage Mode" item on the home screen would make the T5S3 appear as a USB drive for its SD card. In this first draft nothing is shared: the device restarts into a dedicated boot path that runs only the drive and one status screen. The plan is from reading the code at T5S3-Reader@`ea452ff` and the arduino-esp32 2.0.17 framework sources, plus web search in 2026-11. The user decided the screen, exit and write behavior on 2026-11-09 (see Decisions), and a review the same day corrected the boot-flow safety claim, simplified the mount status and added logging over a TinyUSB serial port. The USB mode switch (risk 1) is the one real unknown.
+**Status: in progress; the spike passed on 2026-11-09 (branch `usb-drive`, see Spike results).** A "USB Storage Mode" item on the home screen would make the T5S3 appear as a USB drive for its SD card. In this first draft nothing is shared: the device restarts into a dedicated boot path that runs only the drive and one status screen. The plan is from reading the code at T5S3-Reader@`ea452ff` and the arduino-esp32 2.0.17 framework sources, plus web search in 2026-11. The user decided the screen, exit and write behavior on 2026-11-09 (see Decisions), and a review the same day corrected the boot-flow safety claim, simplified the mount status and added logging over a TinyUSB serial port. The spike resolved risk 1: the runtime switch from hardware CDC to TinyUSB works.
 
 ## Design
 
@@ -36,7 +36,7 @@ Made by the user on 2026-11-09:
 - **Full read and write in the first draft.** The drive is not read-only. `isWritable(false)` is not used.
 - **The screen shows metadata, including mount status.** See Status screen.
 - **Mount status is best effort.** The device cannot know the host's state for certain, so the screen shows facts for the user to make an informed decision, and the user decides.
-- **Exit is locked by default.** An "Enable Exit Button" checkbox starts unchecked on every entry and is not saved. While it is unchecked, the Exit button is disabled and no touch outside the checkbox leaves the mode. This prevents an accidental restart while the host has the drive mounted. The reset button and a power cycle always leave the mode. Once enabled, Exit must exit: it restarts into the reader without further checks.
+- **Exit is locked by default.** An "Enable Exit Button" checkbox starts unchecked on every entry and is not saved. While it is unchecked, the Exit button is disabled and no button press or touch outside the checkbox leaves the mode. The T5S3 has one physical button, GPIO0 (`T5S3_BOOT_BTN` in `lib/Board_T5S3/pin.hpp`), used as both BOOT and power, so its normal power action must also be blocked. This prevents an accidental restart while the host has the drive mounted. A hardware reset and a power cycle always leave the mode. Once enabled, Exit must exit: it restarts into the reader without further checks.
 - **Logs go to the host, never to the card, while the drive runs** (see Logging).
 
 ## Status screen
@@ -59,7 +59,7 @@ Unverified: whether every host sends eject. Linux `umount` alone does not; `ejec
 
 While the drive runs, the firmware must not write a log file to the card: the host owns the filesystem, and a second writer through SdFat's own cache would corrupt it. Instead:
 
-- **Live:** USB mode starts a composite device, `USBMSC` plus a TinyUSB `USBCDC` serial port, so the host sees a drive and `/dev/ttyACM0`. `Logging.h` must write to a `Print&` (or a small switchable target) instead of `HWCDC&`, so `LOG_*` can go to the TinyUSB port in USB mode.
+- **Live:** USB mode starts a composite device, `USBMSC` plus a TinyUSB `USBCDC` serial port, so the host sees a drive and `/dev/ttyACM0`. The port must call `enableReboot(false)`: by default `USBCDC` treats esptool's DTR/RTS sequence as a request to restart into the ROM bootloader (see Spike results), which in this mode could cut off a host write. `Logging.h` must write to a `Print&` (or a small switchable target) instead of `HWCDC&`, so `LOG_*` can go to the TinyUSB port in USB mode.
 - **After exit:** the existing RTC ring buffer keeps the last 16 lines across `esp_restart()`. A later step can append them to a log file on the card at the next normal boot, for sessions with no host watching the serial port.
 
 ## Drive implementation
@@ -77,20 +77,30 @@ While the drive runs, the firmware must not write a log file to the card: the ho
 ## Risks
 
 1. **Switching from hardware CDC to TinyUSB at runtime.** No source found confirms that `USB.begin()` works after hardware CDC was used in the same boot. If it does not, the fallback is `ARDUINO_USB_MODE=0` for the whole firmware, which means the `Logging.h` change above in every boot and a different flashing workflow. The spike answers this first.
-2. **Reflashing while in USB mode.** The hardware serial port is gone, so esptool's automatic reset does not work. A reset or power cycle returns to normal firmware.
+2. **Reflashing while in USB mode.** The hardware serial port is gone and the TinyUSB port has its reboot disabled, so esptool's automatic reset does not work. Hold BOOT and reset, or power cycle, to flash.
 3. **A known SD-over-SPI problem.** One report says first-sector writes read back as zeros with Arduino's `SD` library, fixed by changing a per-call sector count from 1 to 8 ([esp32.com](https://esp32.com/viewtopic.php?p=101610)). That library is not SdFat, so it may not apply here. Check with checksums.
 4. **Power.** The device must stay awake and at full CPU speed while attached.
 
 Other examples used: the arduino-esp32 [USB MSC API page](https://docs.espressif.com/projects/arduino-esp32/en/latest/api/usb_msc.html) (callback and `mediaPresent` semantics), [atomic14's ESP32-S3 MSC write-up](https://atomic14.com/2023/10/09/esp32-s3-usbmsc) (read and write callbacks always get a multiple of the 512-byte sector; raw SD sector access was slow), and a [PlatformIO community thread](https://community.platformio.org/t/adafruit-tinyusb-arduino-on-esp32-s3-and-usb-msc/34789) on an Adafruit TinyUSB MSC example over SdFat (flush the cache in the write-complete callback; report not-ready briefly after a filesystem change so the host refreshes its cache).
 
+## Spike results
+
+On 2026-11-09 a temporary env `t5s3-usb-spike` (`-DUSB_MSC_SPIKE`, `src/UsbMscSpike.cpp`) started `USBMSC` plus `USBCDC` from `setup()` right after `Storage.begin()`, over new `HalStorage` raw-sector methods. It ran on a T5S3 with a 29.7 GB FAT32 card, with this Linux machine (a Raspberry Pi) as the host.
+
+- **The mode switch works.** The hardware serial port left the bus and a composite device "T5S3 Reader USB Storage" (VID:PID `303a:1001`) appeared with mass-storage, CDC and CDC-data interfaces. Linux mounted the card as `sda1` (label `CROSSPOINT`) without errors. The firmware status line showed `mounted=1` and `fat=32`.
+- **The data is correct.** A 32 MiB random file written to the drive, then read back after an unmount and remount, matched byte for byte (`cmp`). `fsck.vfat -n` then found 132 files and no errors other than the dirty bit.
+- **It is slow.** Write plus `sync` took 92.8 s and the read took 98.4 s, about 0.35 MB/s each way, against the estimate of about 1 MB/s. The cause is not known. The 4 KB MSC buffer, per-callback SD command overhead and the 20 ms `delay()` in the status loop are candidates. Hardening must measure this.
+- **Bootloader trap.** The first flash, without `enableReboot(false)`, came up as TinyUSB and then dropped into the ROM bootloader within a few seconds. Something on the host made the DTR/RTS sequence; ModemManager was not running, so the cause is unknown. `usb_persist_restart(RESTART_BOOTLOADER)` sets `RTC_CNTL_FORCE_DOWNLOAD_BOOT` (`0x6000812C`). Clearing that register with esptool `write_mem` and an RTS reset still gave `boot:0x1 (DOWNLOAD)`, but `esptool --after watchdog_reset` booted the firmware.
+- **`udisksctl power-off` removes the whole device** from the host bus, serial port included, so the eject state could not be read back. A replug is needed after it. Plain `eject` needs root on this host.
+
 ## Plan
 
-1. **Spike.** A temporary build flag makes `setup()` start `USBMSC` plus `USBCDC` over the raw SD card right after `Storage.begin()`. Success is judged from the host: `lsusb`, `dmesg -w`, the TinyUSB serial port, mounting the drive, and a checksum round trip. It answers risk 1 on hardware.
+1. **Spike.** Done; see Spike results.
 2. **Raw SD API** in `HalStorage`, then `HalUsbMsc`, and the switchable log target.
 3. **Boot flag and branch** in `main.cpp`, plus `UsbStorageActivity`.
 4. **Home menu item** and strings.
 5. **Status screen** metadata, mount lines and the exit lock.
-6. **Hardening:** the RTC log carried to the card on the next boot, and the test matrix below.
+6. **Hardening:** throughput, the RTC log carried to the card on the next boot, and the test matrix below.
 
 ## Verification
 
@@ -99,7 +109,7 @@ The host machine is the test instrument: `lsusb` and `dmesg` show enumeration, c
 - Copy a large file in and out, compare checksums, and run `fsck.vfat -n` or `fsck.exfat` on the card afterwards.
 - Eject, then reboot and open a book. Unplug without ejecting, then reboot and check the card.
 - Pull the SD card while mounted: the host should get a clean error, and the screen shows the last error.
-- Exit lock: with the checkbox unchecked, every touch outside the checkbox does nothing; leaving and re-entering the mode starts unchecked again.
+- Exit lock: with the checkbox unchecked, the GPIO0 button and every touch outside the checkbox do nothing; leaving and re-entering the mode starts unchecked again.
 - Mount status: watch each line change while plugging in, copying, ejecting, suspending the host and unplugging.
 - Test on Linux first, then Windows or macOS if available.
 - Measure throughput. Full-speed USB should give about 1 MB/s, but that is an estimate, not a measurement.
