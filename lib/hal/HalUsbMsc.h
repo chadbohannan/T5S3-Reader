@@ -20,15 +20,23 @@ class HalUsbMsc {
     uint32_t lastAccessMs;   // millis() of the last read or write, 0 = never
     char lastErrorOp;        // 'R' read, 'W' write, 'r'/'w' bad request, '-' none
     uint32_t lastErrorSector;
+    uint32_t readCalls, writeCalls;  // callbacks since begin()
+    uint32_t readUs, writeUs;        // microseconds inside the SD calls
   };
 
   // Syncs the card, then starts the drive and the serial port. Call once, with no file open.
   bool begin();
   // Hides the medium from the host and syncs the card. Call before restarting.
   void stop();
+  // stop(), hands the USB pins back to the hardware serial port, then restarts. The pin routing
+  // is in RTC registers that survive esp_restart(), so without this the next boot is invisible
+  // on USB until a hardware reset.
+  [[noreturn]] void restart();
   Status status(bool cablePresent) const;
   // TinyUSB serial port; output is dropped while no host has it open.
   Print& serial();
+  // Next complete line received on the serial port (without the newline), or false.
+  bool readLine(char* out, size_t size);
 
   static HalUsbMsc& getInstance() { return instance; }
 

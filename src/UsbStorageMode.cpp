@@ -238,9 +238,16 @@ void runUsbStorageMode(GfxRenderer& renderer, MappedInputManager& input) {
       } else if (exitEnabled && inside(tap, l.margin, l.exitY, l.width - 2 * l.margin, l.exitH)) {
         LOG_INF("USBMODE", "Exit");
         drawRestarting(renderer);
-        UsbMsc.stop();  // a failed sync does not keep us here
-        esp_restart();
+        UsbMsc.restart();  // a failed sync does not keep us here
       }
+    }
+
+    // Host-side exit for scripted tests: deliberate, so the on-device exit lock does not apply.
+    char line[64];
+    if (UsbMsc.readLine(line, sizeof(line)) && strcmp(line, "CMD:EXIT") == 0) {
+      LOG_INF("USBMODE", "Exit from host command");
+      drawRestarting(renderer);
+      UsbMsc.restart();
     }
 
     const unsigned long now = millis();
@@ -256,8 +263,12 @@ void runUsbStorageMode(GfxRenderer& renderer, MappedInputManager& input) {
 
     if (now - lastSerial >= SERIAL_INTERVAL_MS) {
       lastSerial = now;
-      UsbMsc.serial().printf("[%lu] link=%s access=%s error=%s read=%s written=%s errors=%s exit=%d\n", now,
-                             linkText(s.link), n.access, n.error, n.read, n.written, n.errors, exitEnabled);
+      UsbMsc.serial().printf(
+          "[%lu] link=%s access=%s error=%s read=%s written=%s errors=%s exit=%d rdCalls=%lu rdSdMs=%lu wrCalls=%lu "
+          "wrSdMs=%lu\n",
+          now, linkText(s.link), n.access, n.error, n.read, n.written, n.errors, exitEnabled,
+          static_cast<unsigned long>(s.readCalls), static_cast<unsigned long>(s.readUs / 1000),
+          static_cast<unsigned long>(s.writeCalls), static_cast<unsigned long>(s.writeUs / 1000));
     }
     delay(20);
   }

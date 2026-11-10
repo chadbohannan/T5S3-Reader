@@ -510,6 +510,8 @@ void loop() {
         uint8_t* buf = display.getFrameBuffer();
         logSerial.write(buf, bufferSize);
         logSerial.printf("SCREENSHOT_END\n");
+      } else if (cmd == "USBMODE") {
+        requestUsbStorageMode();  // same as the home menu item; lets a host script enter the mode
       }
     }
   }

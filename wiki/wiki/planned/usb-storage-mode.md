@@ -108,6 +108,29 @@ Checked on the device: the menu item restarts into the mode, the host sees the 2
 
 `runUsbStorageMode()` in `src/UsbStorageMode.cpp` is a loop in `setup()`, not an activity, because the activity manager and its tasks never start in this boot. The screen has a **Computer** section (Link, Last access, Last error), an **SD card** section (Size with FAT type, Read, Written, Errors) and Battery. Below them, the **Enable Exit Button** row (the whole row is the tap target, so it is easy to hit) and a full-width Exit button: gray with "Exit (locked)" while unchecked, solid black with "Exit" when checked. A hint line says "Eject on the computer first." or, after an eject, "Ejected. Safe to exit."; it never blocks Exit. Taps go through `MappedInputManager::wasTouchTapped()`, which maps them to the current orientation. `gpio.update()` reads and ignores the power button. The text uses 23 `STR_USB_*` keys in `english.yaml`; other languages fall back to English. The CDC port prints one status line every 2 s, including `exit=0/1`.
 
+## Throughput
+
+Measured on 2026-11-10 with the same host script for each build: enter the mode with `CMD:USBMODE`, mount, `dd` a 32 MiB random file with `oflag=direct conv=fsync`, remount, `dd` it back with `iflag=direct`, `cmp`.
+
+| Build | Write | Read |
+| --- | --- | --- |
+| SdFat default, `USE_SPI_ARRAY_TRANSFER 0` | 0.31 MB/s | 0.34 MB/s |
+| `-DUSE_SPI_ARRAY_TRANSFER=1` | 0.62–0.63 MB/s | 0.64–0.65 MB/s |
+
+**Cause of the first half.** On ESP32 `SdFatConfig.h` selects `USE_SPI_ARRAY_TRANSFER 0`, so `SdSpiArduinoDriver::receive()` and `send()` (`SdSpiLibDriver.h`) call `SPI.transfer()` once per byte, and each call is a separate SPI transaction. With `1` they call `SPI.transfer(buf, n)`, which the core runs through `transferBytes()` and the SPI FIFO. The flag is in `[base]` `build_flags`, so every SD read and write in the firmware uses it, not only USB mode. Earlier, TXT indexing read its file at about 0.55 MB/s ([TXT indexing performance](txt-indexing-performance.md)), which fits the same limit; that has not been measured again.
+
+**Where the rest goes.** `HalUsbMsc` times the SD calls and the CDC status line reports them (`rdCalls`, `rdSdMs`, `wrCalls`, `wrSdMs`). After the write test: 8,226 write calls, 12,842 ms in SD, so about 1.56 ms per 4 KB call (about 2.6 MB/s); reads took about 1.50 ms per call. The host saw about 6.4 ms per 4 KB, so the SD card is only about a quarter of the time. The remaining about 4.9 ms per 4 KB (about 0.84 MB/s) is the USB side. The ESP32-S3 OTG controller is full speed (12 Mbit/s), and TinyUSB MSC moves one 4 KB buffer (`CONFIG_TINYUSB_MSC_BUFSIZE`, built into the prebuilt framework library) and then calls the callback, so the USB and SD phases do not overlap.
+
+**Limit.** With an infinitely fast card the drive would reach only about 0.84 MB/s, 33% above now. Faster SD (dedicated SPI to keep multi-block commands open across calls, saving part of about 0.7 ms command overhead per call) could give a few percent. Double buffering to overlap USB and SD is the only large lever, and the framework's MSC class does not support it. This is accepted for now: a 5 MB EPUB copies in about 8 s.
+
+## Exit and the USB pins
+
+The pin routing between the hardware serial port and the OTG controller is in `RTC_CNTL_USB_CONF_REG` (`SW_HW_USB_PHY_SEL`, `SW_USB_PHY_SEL`, `USB_PAD_ENABLE`), which survives `esp_restart()`. Until 2026-11-10 every exit from the mode restarted into a reader that was invisible on USB until a hardware reset or replug; this looked like the device had gone to sleep. `HalUsbMsc::restart()` now does what the framework's `static` `usb_switch_to_cdc_jtag()` does (reset and disable the OTG module, clear those RTC bits, clear `USB_SERIAL_JTAG_PHY_SEL`), holds D- (GPIO19) and D+ (GPIO20) low for 100 ms so the host sees a disconnect, then restarts. Checked: after `CMD:EXIT` the reader was back on USB as the hardware serial port in 2 s.
+
+## Host commands
+
+For scripted tests: `CMD:USBMODE` on the reader's serial port enters the mode (same as the menu item), and `CMD:EXIT` on the mode's TinyUSB serial port leaves it. `CMD:EXIT` is deliberate, so the on-device exit lock does not apply to it.
+
 ## Plan
 
 1. **Spike.** Done; see Spike results.
@@ -115,7 +138,7 @@ Checked on the device: the menu item restarts into the mode, the host sees the 2
 3. **Boot flag and branch** in `main.cpp`: done in the dev version, with a plain screen instead of `UsbStorageActivity`.
 4. **Home menu item** and strings: done in the dev version.
 5. **Status screen** metadata, mount lines and the exit lock: done 2026-11-09 in `src/UsbStorageMode.cpp` (a plain loop, not a `UsbStorageActivity`).
-6. **Hardening:** throughput, the RTC log carried to the card on the next boot, and the test matrix below.
+6. **Hardening:** throughput (done, see Throughput), the RTC log carried to the card on the next boot, and the test matrix below.
 
 ## Verification
 
