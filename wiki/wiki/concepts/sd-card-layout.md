@@ -46,4 +46,4 @@ A firmware update that bumps a version constant rebuilds caches lazily as books 
 
 ## Concurrency
 
-All access goes through `HalStorage` (`Storage`), which serializes SdFat calls with one mutex. The comment in `setup()` says chapter parsing needs 6 open files at once. On the T5S3, `display.deepSleep()` disconnects the SD card through `Board::deinitForSleep()`, so no file access is possible after it; see [power and sleep](power-and-sleep.md).
+All access goes through `HalStorage` (`Storage`), which serializes SdFat calls with one mutex. The comment in `setup()` says chapter parsing needs 6 open files at once. On the T5S3, `display.deepSleep()` disconnects the SD card through `Board::deinitForSleep()`, so no file access is possible after it; see [power and sleep](power-and-sleep.md). [USB Storage Mode](../components/usb-storage-mode.md) reads and writes the card by raw sector instead (`rawReadSectors`, `rawWriteSectors`), in a separate boot where nothing else touches it.

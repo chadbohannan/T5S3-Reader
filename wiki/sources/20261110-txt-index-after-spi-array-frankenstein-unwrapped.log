@@ -1,0 +1,901 @@
+rst:0x15 (USB_UART_CHIP_RESET),boot:0x29 (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4216a7f2
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce3808,len:0x4bc
+load:0x403c9700,len:0xbd8
+load:0x403cc700,len:0x2a0c
+entry 0x403c98d0
+[1207] [INF] [MAIN] Hardware detect: LilyGo T5S3 E-Paper PRO/Lite
+[1207] [INF] [MAIN] Touch detect: 1
+[1226] [INF] [SD] SD card detected
+[1238] [DBG] [CPS] Settings loaded from file
+[1240] [DBG] [MAIN] Clock settings: tz=UTC rtcStoresUtc=0 rtcVariantHint=0 rtcReferenceEpoch=0
+[1241] [DBG] [CLK] RTC boot read 2024-12-20 11:17:34 using Local layout=2 ref=0 -> epoch=1734693454 result=1
+[1244] [DBG] [KRS] No credentials file found
+[1245] [DBG] [UI] Using Lyra theme
+[1246] [DBG] [MAIN] Starting CrossPoint version 1.0.3-dev-usb-drive-a8413ad
+[1259] [INF] [DSP] T5S3 EPD driver initialized: 540x960 visible, 960x540 scan
+[1259] [DBG] [MAIN] Display initialized
+[1263] [DBG] [SDREG] Found family: Alegreya (4 files) in /.fonts
+[1266] [DBG] [SDREG] Found family: AtkinsonHyperlegibleNext (4 files) in /.fonts
+[1269] [DBG] [SDREG] Found family: Bitter (4 files) in /.fonts
+[1271] [DBG] [SDREG] Found family: SourceHanSansSC (4 files) in /.fonts
+[1273] [DBG] [SDREG] Fonts directory not found: /fonts
+[1273] [DBG] [SDREG] Discovery complete: 4 families
+[1282] [DBG] [SDCF] Loaded: /.fonts/AtkinsonHyperlegibleNext/AtkinsonHyperlegibleNext_16.cpfont (v4, 4 styles)
+[1282] [DBG] [SDCF]   style[0]: 33 intervals, 314 glyphs, advY=43, asc=33, desc=-11, kernL=252, kernR=248, ligs=0
+[1282] [DBG] [SDCF]   style[1]: 33 intervals, 314 glyphs, advY=43, asc=33, desc=-11, kernL=255, kernR=254, ligs=0
+[1282] [DBG] [SDCF]   style[2]: 33 intervals, 314 glyphs, advY=43, asc=33, desc=-11, kernL=264, kernR=260, ligs=0
+[1282] [DBG] [SDCF]   style[3]: 33 intervals, 314 glyphs, advY=43, asc=33, desc=-11, kernL=264, kernR=260, ligs=0
+[1284] [DBG] [SDMGR] Loaded /.fonts/AtkinsonHyperlegibleNext/AtkinsonHyperlegibleNext_16.cpfont size=16 id=1027257015 styles=4
+[1293] [DBG] [SDCF] Loaded: /.fonts/AtkinsonHyperlegibleNext/AtkinsonHyperlegibleNext_12.cpfont (v4, 4 styles)
+[1293] [DBG] [SDCF]   style[0]: 33 intervals, 314 glyphs, advY=33, asc=25, desc=-8, kernL=252, kernR=248, ligs=0
+[1293] [DBG] [SDCF]   style[1]: 33 intervals, 314 glyphs, advY=33, asc=25, desc=-8, kernL=255, kernR=254, ligs=0
+[1295] [DBG] [SDCF]   style[2]: 33 intervals, 314 glyphs, advY=33, asc=25, desc=-8, kernL=264, kernR=260, ligs=0
+[1295] [DBG] [SDCF]   style[3]: 33 intervals, 314 glyphs, advY=33, asc=25, desc=-8, kernL=264, kernR=260, ligs=0
+[1295] [DBG] [SDMGR] Loaded /.fonts/AtkinsonHyperlegibleNext/AtkinsonHyperlegibleNext_12.cpfont size=12 id=-1372187556 styles=4
+[1295] [DBG] [SDFS] Loaded SD card font family: AtkinsonHyperlegibleNext
+[1295] [DBG] [SDFS] SD font system ready (4 families discovered)
+[1296] [DBG] [MAIN] Fonts setup
+[1307] [DBG] [RBS] Recent books loaded from file (7 entries)
+[1307] [DBG] [ACT] Entering activity: Home
+[1317] [DBG] [SDCF] Kern classes + lig loaded: kernL=252, kernR=248, ligs=0
+[1330] [DBG] [SDCF] Built mini kern: 10×10 matrix (100 bytes, full was 89×83 = 7387 bytes)
+[1331] [DBG] [FCM] prewarmCache(SD): 1 glyph(s) not found (styleMask=0x01)
+[1387] [DBG] [SDCF] Advance table style 1: +11 from SD, total=11/768
+[1391] [DBG] [SDCF] Advance table style 0: +1 from SD, total=1/768
+[1397] [DBG] [SDCF] Overflow: loaded U+0066 style 1 on demand (slot 0/64)
+[1403] [DBG] [SDCF] Overflow: loaded U+0072 style 1 on demand (slot 1/64)
+[1408] [DBG] [SDCF] Overflow: loaded U+0061 style 1 on demand (slot 2/64)
+[1414] [DBG] [SDCF] Overflow: loaded U+006E style 1 on demand (slot 3/64)
+[1420] [DBG] [SDCF] Overflow: loaded U+006B style 1 on demand (slot 4/64)
+[1426] [DBG] [SDCF] Overflow: loaded U+0065 style 1 on demand (slot 5/64)
+[1431] [DBG] [SDCF] Overflow: loaded U+0073 style 1 on demand (slot 6/64)
+[1436] [DBG] [SDCF] Overflow: loaded U+0074 style 1 on demand (slot 7/64)
+[1442] [DBG] [SDCF] Overflow: loaded U+0069 style 1 on demand (slot 8/64)
+[1448] [DBG] [SDCF] Overflow: loaded U+002E style 1 on demand (slot 9/64)
+[1453] [DBG] [SDCF] Overflow: loaded U+0078 style 1 on demand (slot 10/64)
+[1461] [DBG] [GFX] Time = 151 ms from clearScreen to displayBuffer
+[1471] [DBG] [DSP] Forcing requested refresh mode for next display update
+[1835] [DBG] [DSP] Panel update: mode=HALF panel=text all=1 gray=0 effect=0 convert=10ms wait=362ms power_on=35ms rails_held=0 frames=14 waveform=14 frame_avg=21058us blit=156ms copy=67ms bus=111ms class=25ms cpu=240MHz total=373ms
+[10008] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[20010] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[30012] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[40014] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[50016] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[60018] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[70020] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[80022] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[90024] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[100026] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[110028] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[120030] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[130032] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[140034] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[150036] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[160038] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[170040] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[180042] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[190044] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[200046] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[210048] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[220050] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[230052] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[240054] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[250056] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[260058] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[270060] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[280062] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[290064] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[300066] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[310068] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[320070] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[330072] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[340074] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[350076] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[360078] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[370080] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[380082] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[390084] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[400086] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[410088] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[420090] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[430092] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[440094] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[450096] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[460098] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[470100] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[480102] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[490104] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[500106] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[510108] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[520110] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[530112] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[540114] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[550116] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[560118] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[570120] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[580122] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[590124] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[600126] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[610128] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[620130] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[630132] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[640134] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[650136] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[660138] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[670140] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[680142] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[690144] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[700146] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[710148] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[720150] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[730152] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[740154] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[750156] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[760158] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[770160] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[780162] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[790164] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[800166] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[810168] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[820170] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[830172] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[840174] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[850176] [INF] [MEM] Free: 248616 bytes, Total: 320400 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[859708] [DBG] [HW] Touch raw=(321,197) logical=(321,197)
+[860054] [DBG] [ACT] Exiting activity: Home
+[860054] [DBG] [ACT] Entering activity: Reader
+[860055] [DBG] [TXT] Loaded TXT file: /frankenstein.txt (443403 bytes)
+[860055] [DBG] [ACT] Exiting activity: Reader
+[860056] [DBG] [ACT] Entering activity: TxtReader
+[860299] [DBG] [LOOP] New max loop duration: 246 ms (activity: 246 ms)
+[860299] [DBG] [TRS] Viewport: 524x914, lines per page: 21
+[860300] [DBG] [TRS] Building page index for 443403 bytes...
+[860304] [DBG] [GFX] Time = 858994 ms from clearScreen to displayBuffer
+[860314] [DBG] [DSP] Forcing requested refresh mode for next display update
+[860315] [INF] [MEM] Free: 248548 bytes, Total: 320368 bytes, Min Free: 245404 bytes, MaxAlloc: 233460 bytes
+[860679] [DBG] [DSP] Panel update: mode=HALF panel=text all=0 gray=0 effect=0 convert=10ms wait=363ms power_on=35ms rails_held=0 frames=14 waveform=14 frame_avg=21062us blit=155ms copy=66ms bus=110ms class=25ms cpu=240MHz total=373ms
+[860719] [DBG] [SDCF] Advance table style 0: +68 from SD, total=68/768
+[860719] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[860753] [DBG] [SDCF] Advance table style 0: +1 from SD, total=69/768
+[860753] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[860788] [DBG] [SDCF] Advance table style 0: +2 from SD, total=71/768
+[860788] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[860818] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[860852] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[860883] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[860920] [DBG] [SDCF] Advance table style 0: +2 from SD, total=73/768
+[860920] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[860951] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[860983] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861016] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861050] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861084] [DBG] [SDCF] Advance table style 0: +2 from SD, total=75/768
+[861084] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861115] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861148] [DBG] [SDCF] Advance table style 0: +2 from SD, total=77/768
+[861148] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861182] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861213] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861246] [DBG] [SDCF] Advance table style 0: +1 from SD, total=78/768
+[861246] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861276] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861311] [DBG] [SDCF] Advance table style 0: +1 from SD, total=79/768
+[861311] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861341] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861371] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861404] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861437] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861468] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861498] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861528] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861558] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861590] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861623] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861653] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861684] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861713] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861743] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861770] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861801] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861832] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861861] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861891] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861925] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861954] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[861987] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[862022] [DBG] [SDCF] Advance table style 0: +1 from SD, total=80/768
+[862022] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[862055] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[862085] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[862117] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[862149] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[862181] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[862213] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[862251] [DBG] [SDCF] Advance table style 0: +5 from SD, total=85/768
+[862252] [DBG] [GFX] ensureSdCardFontReady: 2 glyph(s) not found
+[862289] [DBG] [SDCF] Advance table style 0: +7 from SD, total=92/768
+[862289] [DBG] [GFX] ensureSdCardFontReady: 2 glyph(s) not found
+[862320] [DBG] [SDCF] Advance table style 0: +3 from SD, total=95/768
+[862320] [DBG] [GFX] ensureSdCardFontReady: 2 glyph(s) not found
+[862346] [DBG] [TRS] Built page index: 668 pages
+[862347] [INF] [TRS] Index built: 443403 bytes, 668 pages, 1667 ms, crc32 5e89345f
+[862347] [INF] [TRS] profile: load 1541 ms (read 223, font 420, fit 424, yield 287, other 185); outer yield 70 ms; pages 668, fit calls 14020, yields 743, refills 51
+[862348] [INF] [TRS] page-offset 0 0
+[862348] [INF] [TRS] page-offset 1 610
+[862348] [INF] [TRS] page-offset 2 1223
+[862348] [INF] [TRS] page-offset 3 1880
+[862348] [INF] [TRS] page-offset 4 2567
+[862348] [INF] [TRS] page-offset 5 3227
+[862348] [INF] [TRS] page-offset 6 3792
+[862348] [INF] [TRS] page-offset 7 4473
+[862348] [INF] [TRS] page-offset 8 5146
+[862348] [INF] [TRS] page-offset 9 5862
+[862348] [INF] [TRS] page-offset 10 6533
+[862348] [INF] [TRS] page-offset 11 7232
+[862349] [INF] [TRS] page-offset 12 7874
+[862349] [INF] [TRS] page-offset 13 8529
+[862349] [INF] [TRS] page-offset 14 9215
+[862349] [INF] [TRS] page-offset 15 9880
+[862349] [INF] [TRS] page-offset 16 10465
+[862349] [INF] [TRS] page-offset 17 11140
+[862349] [INF] [TRS] page-offset 18 11830
+[862349] [INF] [TRS] page-offset 19 12520
+[862349] [INF] [TRS] page-offset 20 13157
+[862349] [INF] [TRS] page-offset 21 13832
+[862349] [INF] [TRS] page-offset 22 14516
+[862349] [INF] [TRS] page-offset 23 15207
+[862350] [INF] [TRS] page-offset 24 15868
+[862350] [INF] [TRS] page-offset 25 16551
+[862350] [INF] [TRS] page-offset 26 17177
+[862350] [INF] [TRS] page-offset 27 17795
+[862350] [INF] [TRS] page-offset 28 18478
+[862350] [INF] [TRS] page-offset 29 19129
+[862350] [INF] [TRS] page-offset 30 19690
+[862350] [INF] [TRS] page-offset 31 20340
+[862350] [INF] [TRS] page-offset 32 21039
+[862350] [INF] [TRS] page-offset 33 21725
+[862350] [INF] [TRS] page-offset 34 22382
+[862350] [INF] [TRS] page-offset 35 23029
+[862351] [INF] [TRS] page-offset 36 23685
+[862351] [INF] [TRS] page-offset 37 24351
+[862351] [INF] [TRS] page-offset 38 24925
+[862351] [INF] [TRS] page-offset 39 25546
+[862351] [INF] [TRS] page-offset 40 26233
+[862351] [INF] [TRS] page-offset 41 26928
+[862351] [INF] [TRS] page-offset 42 27566
+[862351] [INF] [TRS] page-offset 43 28243
+[862351] [INF] [TRS] page-offset 44 28925
+[862351] [INF] [TRS] page-offset 45 29578
+[862351] [INF] [TRS] page-offset 46 30232
+[862351] [INF] [TRS] page-offset 47 30914
+[862352] [INF] [TRS] page-offset 48 31580
+[862352] [INF] [TRS] page-offset 49 32240
+[862352] [INF] [TRS] page-offset 50 32905
+[862352] [INF] [TRS] page-offset 51 33584
+[862352] [INF] [TRS] page-offset 52 34269
+[862352] [INF] [TRS] page-offset 53 34931
+[862352] [INF] [TRS] page-offset 54 35588
+[862352] [INF] [TRS] page-offset 55 36255
+[862352] [INF] [TRS] page-offset 56 36891
+[862352] [INF] [TRS] page-offset 57 37566
+[862352] [INF] [TRS] page-offset 58 38208
+[862352] [INF] [TRS] page-offset 59 38877
+[862353] [INF] [TRS] page-offset 60 39548
+[862353] [INF] [TRS] page-offset 61 40223
+[862353] [INF] [TRS] page-offset 62 40894
+[862353] [INF] [TRS] page-offset 63 41586
+[862353] [INF] [TRS] page-offset 64 42283
+[862353] [INF] [TRS] page-offset 65 42945
+[862353] [INF] [TRS] page-offset 66 43597
+[862354] [INF] [TRS] page-offset 67 44254
+[862354] [INF] [TRS] page-offset 68 44936
+[862354] [INF] [TRS] page-offset 69 45575
+[862354] [INF] [TRS] page-offset 70 46253
+[862354] [INF] [TRS] page-offset 71 46940
+[862354] [INF] [TRS] page-offset 72 47540
+[862354] [INF] [TRS] page-offset 73 48239
+[862354] [INF] [TRS] page-offset 74 48883
+[862354] [INF] [TRS] page-offset 75 49567
+[862354] [INF] [TRS] page-offset 76 50248
+[862354] [INF] [TRS] page-offset 77 50930
+[862355] [INF] [TRS] page-offset 78 51589
+[862355] [INF] [TRS] page-offset 79 52234
+[862355] [INF] [TRS] page-offset 80 52891
+[862355] [INF] [TRS] page-offset 81 53547
+[862355] [INF] [TRS] page-offset 82 54226
+[862355] [INF] [TRS] page-offset 83 54906
+[862355] [INF] [TRS] page-offset 84 55581
+[862355] [INF] [TRS] page-offset 85 56251
+[862355] [INF] [TRS] page-offset 86 56927
+[862355] [INF] [TRS] page-offset 87 57563
+[862355] [INF] [TRS] page-offset 88 58229
+[862356] [INF] [TRS] page-offset 89 58880
+[862356] [INF] [TRS] page-offset 90 59528
+[862356] [INF] [TRS] page-offset 91 60195
+[862356] [INF] [TRS] page-offset 92 60879
+[862356] [INF] [TRS] page-offset 93 61564
+[862356] [INF] [TRS] page-offset 94 62239
+[862356] [INF] [TRS] page-offset 95 62924
+[862356] [INF] [TRS] page-offset 96 63584
+[862356] [INF] [TRS] page-offset 97 64222
+[862356] [INF] [TRS] page-offset 98 64891
+[862356] [INF] [TRS] page-offset 99 65565
+[862357] [INF] [TRS] page-offset 100 66233
+[862357] [INF] [TRS] page-offset 101 66884
+[862357] [INF] [TRS] page-offset 102 67583
+[862357] [INF] [TRS] page-offset 103 68244
+[862357] [INF] [TRS] page-offset 104 68893
+[862357] [INF] [TRS] page-offset 105 69562
+[862357] [INF] [TRS] page-offset 106 70232
+[862357] [INF] [TRS] page-offset 107 70931
+[862358] [INF] [TRS] page-offset 108 71594
+[862358] [INF] [TRS] page-offset 109 72253
+[862358] [INF] [TRS] page-offset 110 72904
+[862358] [INF] [TRS] page-offset 111 73550
+[862358] [INF] [TRS] page-offset 112 74220
+[862358] [INF] [TRS] page-offset 113 74888
+[862358] [INF] [TRS] page-offset 114 75583
+[862358] [INF] [TRS] page-offset 115 76258
+[862358] [INF] [TRS] page-offset 116 76927
+[862358] [INF] [TRS] page-offset 117 77595
+[862358] [INF] [TRS] page-offset 118 78259
+[862359] [INF] [TRS] page-offset 119 78937
+[862359] [INF] [TRS] page-offset 120 79630
+[862359] [INF] [TRS] page-offset 121 80293
+[862359] [INF] [TRS] page-offset 122 80984
+[862359] [INF] [TRS] page-offset 123 81669
+[862359] [INF] [TRS] page-offset 124 82353
+[862359] [INF] [TRS] page-offset 125 83015
+[862359] [INF] [TRS] page-offset 126 83696
+[862359] [INF] [TRS] page-offset 127 84348
+[862359] [INF] [TRS] page-offset 128 85005
+[862359] [INF] [TRS] page-offset 129 85699
+[862360] [INF] [TRS] page-offset 130 86324
+[862360] [INF] [TRS] page-offset 131 86986
+[862360] [INF] [TRS] page-offset 132 87628
+[862360] [INF] [TRS] page-offset 133 88289
+[862360] [INF] [TRS] page-offset 134 88947
+[862360] [INF] [TRS] page-offset 135 89632
+[862360] [INF] [TRS] page-offset 136 90343
+[862360] [INF] [TRS] page-offset 137 91000
+[862360] [INF] [TRS] page-offset 138 91664
+[862360] [INF] [TRS] page-offset 139 92317
+[862360] [INF] [TRS] page-offset 140 92962
+[862361] [INF] [TRS] page-offset 141 93566
+[862361] [INF] [TRS] page-offset 142 94218
+[862361] [INF] [TRS] page-offset 143 94867
+[862361] [INF] [TRS] page-offset 144 95575
+[862361] [INF] [TRS] page-offset 145 96274
+[862361] [INF] [TRS] page-offset 146 96963
+[862361] [INF] [TRS] page-offset 147 97612
+[862361] [INF] [TRS] page-offset 148 98271
+[862361] [INF] [TRS] page-offset 149 98951
+[862361] [INF] [TRS] page-offset 150 99612
+[862361] [INF] [TRS] page-offset 151 100259
+[862362] [INF] [TRS] page-offset 152 100902
+[862362] [INF] [TRS] page-offset 153 101543
+[862362] [INF] [TRS] page-offset 154 102222
+[862362] [INF] [TRS] page-offset 155 102931
+[862362] [INF] [TRS] page-offset 156 103613
+[862362] [INF] [TRS] page-offset 157 104297
+[862362] [INF] [TRS] page-offset 158 104974
+[862362] [INF] [TRS] page-offset 159 105637
+[862362] [INF] [TRS] page-offset 160 106286
+[862362] [INF] [TRS] page-offset 161 106985
+[862363] [INF] [TRS] page-offset 162 107666
+[862363] [INF] [TRS] page-offset 163 108309
+[862363] [INF] [TRS] page-offset 164 108953
+[862363] [INF] [TRS] page-offset 165 109628
+[862363] [INF] [TRS] page-offset 166 110317
+[862363] [INF] [TRS] page-offset 167 110989
+[862363] [INF] [TRS] page-offset 168 111645
+[862363] [INF] [TRS] page-offset 169 112292
+[862363] [INF] [TRS] page-offset 170 112954
+[862363] [INF] [TRS] page-offset 171 113616
+[862363] [INF] [TRS] page-offset 172 114314
+[862364] [INF] [TRS] page-offset 173 114973
+[862364] [INF] [TRS] page-offset 174 115635
+[862364] [INF] [TRS] page-offset 175 116275
+[862364] [INF] [TRS] page-offset 176 116913
+[862364] [INF] [TRS] page-offset 177 117549
+[862364] [INF] [TRS] page-offset 178 118215
+[862364] [INF] [TRS] page-offset 179 118899
+[862364] [INF] [TRS] page-offset 180 119594
+[862364] [INF] [TRS] page-offset 181 120265
+[862364] [INF] [TRS] page-offset 182 120896
+[862364] [INF] [TRS] page-offset 183 121524
+[862365] [INF] [TRS] page-offset 184 122200
+[862365] [INF] [TRS] page-offset 185 122866
+[862365] [INF] [TRS] page-offset 186 123497
+[862365] [INF] [TRS] page-offset 187 124142
+[862365] [INF] [TRS] page-offset 188 124824
+[862365] [INF] [TRS] page-offset 189 125519
+[862365] [INF] [TRS] page-offset 190 126190
+[862365] [INF] [TRS] page-offset 191 126908
+[862365] [INF] [TRS] page-offset 192 127580
+[862365] [INF] [TRS] page-offset 193 128263
+[862365] [INF] [TRS] page-offset 194 128942
+[862366] [INF] [TRS] page-offset 195 129622
+[862366] [INF] [TRS] page-offset 196 130279
+[862366] [INF] [TRS] page-offset 197 130967
+[862366] [INF] [TRS] page-offset 198 131613
+[862366] [INF] [TRS] page-offset 199 132266
+[862366] [INF] [TRS] page-offset 200 132947
+[862366] [INF] [TRS] page-offset 201 133611
+[862366] [INF] [TRS] page-offset 202 134243
+[862366] [INF] [TRS] page-offset 203 134939
+[862366] [INF] [TRS] page-offset 204 135634
+[862366] [INF] [TRS] page-offset 205 136296
+[862367] [INF] [TRS] page-offset 206 136968
+[862367] [INF] [TRS] page-offset 207 137608
+[862367] [INF] [TRS] page-offset 208 138267
+[862367] [INF] [TRS] page-offset 209 138943
+[862367] [INF] [TRS] page-offset 210 139609
+[862367] [INF] [TRS] page-offset 211 140255
+[862367] [INF] [TRS] page-offset 212 140934
+[862368] [INF] [TRS] page-offset 213 141606
+[862368] [INF] [TRS] page-offset 214 142268
+[862368] [INF] [TRS] page-offset 215 142923
+[862368] [INF] [TRS] page-offset 216 143588
+[862368] [INF] [TRS] page-offset 217 144273
+[862368] [INF] [TRS] page-offset 218 144959
+[862368] [INF] [TRS] page-offset 219 145638
+[862368] [INF] [TRS] page-offset 220 146296
+[862369] [INF] [TRS] page-offset 221 146943
+[862369] [INF] [TRS] page-offset 222 147622
+[862369] [INF] [TRS] page-offset 223 148313
+[862369] [INF] [TRS] page-offset 224 148980
+[862369] [INF] [TRS] page-offset 225 149636
+[862369] [INF] [TRS] page-offset 226 150288
+[862369] [INF] [TRS] page-offset 227 150937
+[862369] [INF] [TRS] page-offset 228 151631
+[862369] [INF] [TRS] page-offset 229 152281
+[862370] [INF] [TRS] page-offset 230 152953
+[862370] [INF] [TRS] page-offset 231 153607
+[862370] [INF] [TRS] page-offset 232 154241
+[862370] [INF] [TRS] page-offset 233 154924
+[862370] [INF] [TRS] page-offset 234 155568
+[862370] [INF] [TRS] page-offset 235 156261
+[862370] [INF] [TRS] page-offset 236 156967
+[862370] [INF] [TRS] page-offset 237 157616
+[862370] [INF] [TRS] page-offset 238 158286
+[862370] [INF] [TRS] page-offset 239 158951
+[862370] [INF] [TRS] page-offset 240 159627
+[862371] [INF] [TRS] page-offset 241 160307
+[862371] [INF] [TRS] page-offset 242 160987
+[862371] [INF] [TRS] page-offset 243 161628
+[862371] [INF] [TRS] page-offset 244 162261
+[862371] [INF] [TRS] page-offset 245 162932
+[862371] [INF] [TRS] page-offset 246 163583
+[862371] [INF] [TRS] page-offset 247 164255
+[862371] [INF] [TRS] page-offset 248 164912
+[862371] [INF] [TRS] page-offset 249 165533
+[862371] [INF] [TRS] page-offset 250 166189
+[862371] [INF] [TRS] page-offset 251 166846
+[862372] [INF] [TRS] page-offset 252 167530
+[862372] [INF] [TRS] page-offset 253 168199
+[862372] [INF] [TRS] page-offset 254 168891
+[862372] [INF] [TRS] page-offset 255 169566
+[862372] [INF] [TRS] page-offset 256 170247
+[862372] [INF] [TRS] page-offset 257 170778
+[862372] [INF] [TRS] page-offset 258 171472
+[862372] [INF] [TRS] page-offset 259 172131
+[862372] [INF] [TRS] page-offset 260 172812
+[862372] [INF] [TRS] page-offset 261 173447
+[862372] [INF] [TRS] page-offset 262 174135
+[862373] [INF] [TRS] page-offset 263 174844
+[862373] [INF] [TRS] page-offset 264 175519
+[862373] [INF] [TRS] page-offset 265 176192
+[862373] [INF] [TRS] page-offset 266 176861
+[862373] [INF] [TRS] page-offset 267 177539
+[862373] [INF] [TRS] page-offset 268 178208
+[862373] [INF] [TRS] page-offset 269 178864
+[862373] [INF] [TRS] page-offset 270 179505
+[862373] [INF] [TRS] page-offset 271 180191
+[862373] [INF] [TRS] page-offset 272 180867
+[862373] [INF] [TRS] page-offset 273 181563
+[862374] [INF] [TRS] page-offset 274 182244
+[862374] [INF] [TRS] page-offset 275 182888
+[862374] [INF] [TRS] page-offset 276 183516
+[862374] [INF] [TRS] page-offset 277 184218
+[862374] [INF] [TRS] page-offset 278 184907
+[862374] [INF] [TRS] page-offset 279 185612
+[862374] [INF] [TRS] page-offset 280 186274
+[862374] [INF] [TRS] page-offset 281 186961
+[862374] [INF] [TRS] page-offset 282 187623
+[862374] [INF] [TRS] page-offset 283 188295
+[862374] [INF] [TRS] page-offset 284 188947
+[862375] [INF] [TRS] page-offset 285 189611
+[862375] [INF] [TRS] page-offset 286 190286
+[862375] [INF] [TRS] page-offset 287 190963
+[862375] [INF] [TRS] page-offset 288 191642
+[862375] [INF] [TRS] page-offset 289 192312
+[862375] [INF] [TRS] page-offset 290 193005
+[862375] [INF] [TRS] page-offset 291 193678
+[862375] [INF] [TRS] page-offset 292 194319
+[862375] [INF] [TRS] page-offset 293 194988
+[862375] [INF] [TRS] page-offset 294 195636
+[862375] [INF] [TRS] page-offset 295 196301
+[862376] [INF] [TRS] page-offset 296 196950
+[862376] [INF] [TRS] page-offset 297 197596
+[862376] [INF] [TRS] page-offset 298 198279
+[862376] [INF] [TRS] page-offset 299 198954
+[862376] [INF] [TRS] page-offset 300 199645
+[862376] [INF] [TRS] page-offset 301 200314
+[862376] [INF] [TRS] page-offset 302 200983
+[862376] [INF] [TRS] page-offset 303 201665
+[862376] [INF] [TRS] page-offset 304 202342
+[862376] [INF] [TRS] page-offset 305 203048
+[862376] [INF] [TRS] page-offset 306 203749
+[862377] [INF] [TRS] page-offset 307 204395
+[862377] [INF] [TRS] page-offset 308 205030
+[862377] [INF] [TRS] page-offset 309 205717
+[862377] [INF] [TRS] page-offset 310 206395
+[862377] [INF] [TRS] page-offset 311 207062
+[862377] [INF] [TRS] page-offset 312 207690
+[862377] [INF] [TRS] page-offset 313 208349
+[862377] [INF] [TRS] page-offset 314 209026
+[862377] [INF] [TRS] page-offset 315 209697
+[862377] [INF] [TRS] page-offset 316 210360
+[862377] [INF] [TRS] page-offset 317 211032
+[862378] [INF] [TRS] page-offset 318 211677
+[862378] [INF] [TRS] page-offset 319 212344
+[862378] [INF] [TRS] page-offset 320 213013
+[862378] [INF] [TRS] page-offset 321 213675
+[862378] [INF] [TRS] page-offset 322 214359
+[862378] [INF] [TRS] page-offset 323 215014
+[862378] [INF] [TRS] page-offset 324 215645
+[862378] [INF] [TRS] page-offset 325 216297
+[862378] [INF] [TRS] page-offset 326 216946
+[862378] [INF] [TRS] page-offset 327 217617
+[862378] [INF] [TRS] page-offset 328 218257
+[862379] [INF] [TRS] page-offset 329 218923
+[862379] [INF] [TRS] page-offset 330 219576
+[862379] [INF] [TRS] page-offset 331 220254
+[862379] [INF] [TRS] page-offset 332 220914
+[862379] [INF] [TRS] page-offset 333 221575
+[862379] [INF] [TRS] page-offset 334 222262
+[862379] [INF] [TRS] page-offset 335 222919
+[862380] [INF] [TRS] page-offset 336 223585
+[862380] [INF] [TRS] page-offset 337 224192
+[862380] [INF] [TRS] page-offset 338 224848
+[862380] [INF] [TRS] page-offset 339 225519
+[862380] [INF] [TRS] page-offset 340 226192
+[862380] [INF] [TRS] page-offset 341 226830
+[862380] [INF] [TRS] page-offset 342 227520
+[862380] [INF] [TRS] page-offset 343 228170
+[862381] [INF] [TRS] page-offset 344 228832
+[862381] [INF] [TRS] page-offset 345 229515
+[862381] [INF] [TRS] page-offset 346 230123
+[862381] [INF] [TRS] page-offset 347 230798
+[862381] [INF] [TRS] page-offset 348 231447
+[862381] [INF] [TRS] page-offset 349 232118
+[862381] [INF] [TRS] page-offset 350 232769
+[862381] [INF] [TRS] page-offset 351 233414
+[862381] [INF] [TRS] page-offset 352 234081
+[862382] [INF] [TRS] page-offset 353 234741
+[862382] [INF] [TRS] page-offset 354 235427
+[862382] [INF] [TRS] page-offset 355 236092
+[862382] [INF] [TRS] page-offset 356 236741
+[862382] [INF] [TRS] page-offset 357 237416
+[862382] [INF] [TRS] page-offset 358 238065
+[862382] [INF] [TRS] page-offset 359 238734
+[862382] [INF] [TRS] page-offset 360 239413
+[862382] [INF] [TRS] page-offset 361 240111
+[862382] [INF] [TRS] page-offset 362 240812
+[862382] [INF] [TRS] page-offset 363 241486
+[862383] [INF] [TRS] page-offset 364 242125
+[862383] [INF] [TRS] page-offset 365 242791
+[862383] [INF] [TRS] page-offset 366 243423
+[862383] [INF] [TRS] page-offset 367 244082
+[862383] [INF] [TRS] page-offset 368 244722
+[862383] [INF] [TRS] page-offset 369 245402
+[862383] [INF] [TRS] page-offset 370 246080
+[862383] [INF] [TRS] page-offset 371 246775
+[862383] [INF] [TRS] page-offset 372 247426
+[862383] [INF] [TRS] page-offset 373 248090
+[862383] [INF] [TRS] page-offset 374 248758
+[862384] [INF] [TRS] page-offset 375 249433
+[862384] [INF] [TRS] page-offset 376 250098
+[862384] [INF] [TRS] page-offset 377 250765
+[862384] [INF] [TRS] page-offset 378 251437
+[862384] [INF] [TRS] page-offset 379 252099
+[862384] [INF] [TRS] page-offset 380 252761
+[862384] [INF] [TRS] page-offset 381 253450
+[862384] [INF] [TRS] page-offset 382 254105
+[862384] [INF] [TRS] page-offset 383 254778
+[862384] [INF] [TRS] page-offset 384 255434
+[862384] [INF] [TRS] page-offset 385 256127
+[862385] [INF] [TRS] page-offset 386 256786
+[862385] [INF] [TRS] page-offset 387 257450
+[862385] [INF] [TRS] page-offset 388 258108
+[862385] [INF] [TRS] page-offset 389 258782
+[862385] [INF] [TRS] page-offset 390 259439
+[862385] [INF] [TRS] page-offset 391 260090
+[862385] [INF] [TRS] page-offset 392 260738
+[862385] [INF] [TRS] page-offset 393 261390
+[862385] [INF] [TRS] page-offset 394 262064
+[862385] [INF] [TRS] page-offset 395 262686
+[862385] [INF] [TRS] page-offset 396 263329
+[862386] [INF] [TRS] page-offset 397 264012
+[862386] [INF] [TRS] page-offset 398 264646
+[862386] [INF] [TRS] page-offset 399 265307
+[862386] [INF] [TRS] page-offset 400 265969
+[862386] [INF] [TRS] page-offset 401 266641
+[862386] [INF] [TRS] page-offset 402 267326
+[862386] [INF] [TRS] page-offset 403 267984
+[862386] [INF] [TRS] page-offset 404 268672
+[862386] [INF] [TRS] page-offset 405 269360
+[862386] [INF] [TRS] page-offset 406 270021
+[862386] [INF] [TRS] page-offset 407 270659
+[862387] [INF] [TRS] page-offset 408 271323
+[862387] [INF] [TRS] page-offset 409 271982
+[862387] [INF] [TRS] page-offset 410 272634
+[862387] [INF] [TRS] page-offset 411 273301
+[862387] [INF] [TRS] page-offset 412 273981
+[862387] [INF] [TRS] page-offset 413 274641
+[862387] [INF] [TRS] page-offset 414 275259
+[862387] [INF] [TRS] page-offset 415 275913
+[862387] [INF] [TRS] page-offset 416 276569
+[862387] [INF] [TRS] page-offset 417 277224
+[862387] [INF] [TRS] page-offset 418 277884
+[862388] [INF] [TRS] page-offset 419 278577
+[862388] [INF] [TRS] page-offset 420 279228
+[862388] [INF] [TRS] page-offset 421 279909
+[862388] [INF] [TRS] page-offset 422 280564
+[862388] [INF] [TRS] page-offset 423 281211
+[862388] [INF] [TRS] page-offset 424 281873
+[862388] [INF] [TRS] page-offset 425 282521
+[862388] [INF] [TRS] page-offset 426 283179
+[862388] [INF] [TRS] page-offset 427 283822
+[862388] [INF] [TRS] page-offset 428 284463
+[862388] [INF] [TRS] page-offset 429 285135
+[862389] [INF] [TRS] page-offset 430 285813
+[862389] [INF] [TRS] page-offset 431 286463
+[862389] [INF] [TRS] page-offset 432 287145
+[862389] [INF] [TRS] page-offset 433 287829
+[862389] [INF] [TRS] page-offset 434 288536
+[862389] [INF] [TRS] page-offset 435 289208
+[862389] [INF] [TRS] page-offset 436 289775
+[862389] [INF] [TRS] page-offset 437 290426
+[862389] [INF] [TRS] page-offset 438 291063
+[862389] [INF] [TRS] page-offset 439 291698
+[862389] [INF] [TRS] page-offset 440 292359
+[862390] [INF] [TRS] page-offset 441 293037
+[862390] [INF] [TRS] page-offset 442 293692
+[862390] [INF] [TRS] page-offset 443 294341
+[862390] [INF] [TRS] page-offset 444 294970
+[862390] [INF] [TRS] page-offset 445 295654
+[862390] [INF] [TRS] page-offset 446 296300
+[862390] [INF] [TRS] page-offset 447 296975
+[862390] [INF] [TRS] page-offset 448 297630
+[862390] [INF] [TRS] page-offset 449 298300
+[862390] [INF] [TRS] page-offset 450 298968
+[862390] [INF] [TRS] page-offset 451 299602
+[862391] [INF] [TRS] page-offset 452 300260
+[862391] [INF] [TRS] page-offset 453 300919
+[862391] [INF] [TRS] page-offset 454 301616
+[862391] [INF] [TRS] page-offset 455 302290
+[862391] [INF] [TRS] page-offset 456 302985
+[862391] [INF] [TRS] page-offset 457 303664
+[862391] [INF] [TRS] page-offset 458 304343
+[862392] [INF] [TRS] page-offset 459 305012
+[862392] [INF] [TRS] page-offset 460 305629
+[862392] [INF] [TRS] page-offset 461 306285
+[862392] [INF] [TRS] page-offset 462 306943
+[862392] [INF] [TRS] page-offset 463 307603
+[862392] [INF] [TRS] page-offset 464 308274
+[862392] [INF] [TRS] page-offset 465 308915
+[862392] [INF] [TRS] page-offset 466 309566
+[862393] [INF] [TRS] page-offset 467 310201
+[862393] [INF] [TRS] page-offset 468 310836
+[862393] [INF] [TRS] page-offset 469 311490
+[862393] [INF] [TRS] page-offset 470 312153
+[862393] [INF] [TRS] page-offset 471 312786
+[862393] [INF] [TRS] page-offset 472 313449
+[862393] [INF] [TRS] page-offset 473 314109
+[862393] [INF] [TRS] page-offset 474 314798
+[862393] [INF] [TRS] page-offset 475 315477
+[862394] [INF] [TRS] page-offset 476 316172
+[862394] [INF] [TRS] page-offset 477 316842
+[862394] [INF] [TRS] page-offset 478 317514
+[862394] [INF] [TRS] page-offset 479 318183
+[862394] [INF] [TRS] page-offset 480 318863
+[862394] [INF] [TRS] page-offset 481 319552
+[862394] [INF] [TRS] page-offset 482 320251
+[862394] [INF] [TRS] page-offset 483 320952
+[862394] [INF] [TRS] page-offset 484 321611
+[862394] [INF] [TRS] page-offset 485 322316
+[862394] [INF] [TRS] page-offset 486 322954
+[862395] [INF] [TRS] page-offset 487 323609
+[862395] [INF] [TRS] page-offset 488 324264
+[862395] [INF] [TRS] page-offset 489 324924
+[862395] [INF] [TRS] page-offset 490 325554
+[862395] [INF] [TRS] page-offset 491 326236
+[862395] [INF] [TRS] page-offset 492 326917
+[862395] [INF] [TRS] page-offset 493 327574
+[862395] [INF] [TRS] page-offset 494 328236
+[862395] [INF] [TRS] page-offset 495 328891
+[862395] [INF] [TRS] page-offset 496 329577
+[862395] [INF] [TRS] page-offset 497 330267
+[862396] [INF] [TRS] page-offset 498 330931
+[862396] [INF] [TRS] page-offset 499 331573
+[862396] [INF] [TRS] page-offset 500 332242
+[862396] [INF] [TRS] page-offset 501 332890
+[862396] [INF] [TRS] page-offset 502 333572
+[862396] [INF] [TRS] page-offset 503 334237
+[862396] [INF] [TRS] page-offset 504 334868
+[862396] [INF] [TRS] page-offset 505 335539
+[862396] [INF] [TRS] page-offset 506 336214
+[862396] [INF] [TRS] page-offset 507 336874
+[862396] [INF] [TRS] page-offset 508 337491
+[862397] [INF] [TRS] page-offset 509 338141
+[862397] [INF] [TRS] page-offset 510 338784
+[862397] [INF] [TRS] page-offset 511 339447
+[862397] [INF] [TRS] page-offset 512 340143
+[862397] [INF] [TRS] page-offset 513 340827
+[862397] [INF] [TRS] page-offset 514 341473
+[862397] [INF] [TRS] page-offset 515 342144
+[862397] [INF] [TRS] page-offset 516 342819
+[862397] [INF] [TRS] page-offset 517 343489
+[862397] [INF] [TRS] page-offset 518 344192
+[862397] [INF] [TRS] page-offset 519 344847
+[862398] [INF] [TRS] page-offset 520 345520
+[862398] [INF] [TRS] page-offset 521 346183
+[862398] [INF] [TRS] page-offset 522 346839
+[862398] [INF] [TRS] page-offset 523 347499
+[862398] [INF] [TRS] page-offset 524 348204
+[862398] [INF] [TRS] page-offset 525 348858
+[862398] [INF] [TRS] page-offset 526 349490
+[862398] [INF] [TRS] page-offset 527 350122
+[862398] [INF] [TRS] page-offset 528 350764
+[862398] [INF] [TRS] page-offset 529 351437
+[862398] [INF] [TRS] page-offset 530 352121
+[862399] [INF] [TRS] page-offset 531 352791
+[862399] [INF] [TRS] page-offset 532 353488
+[862399] [INF] [TRS] page-offset 533 354182
+[862399] [INF] [TRS] page-offset 534 354853
+[862399] [INF] [TRS] page-offset 535 355537
+[862399] [INF] [TRS] page-offset 536 356215
+[862399] [INF] [TRS] page-offset 537 356873
+[862399] [INF] [TRS] page-offset 538 357505
+[862399] [INF] [TRS] page-offset 539 358178
+[862399] [INF] [TRS] page-offset 540 358844
+[862399] [INF] [TRS] page-offset 541 359512
+[862400] [INF] [TRS] page-offset 542 360178
+[862400] [INF] [TRS] page-offset 543 360838
+[862400] [INF] [TRS] page-offset 544 361489
+[862400] [INF] [TRS] page-offset 545 362150
+[862400] [INF] [TRS] page-offset 546 362803
+[862400] [INF] [TRS] page-offset 547 363479
+[862400] [INF] [TRS] page-offset 548 364132
+[862400] [INF] [TRS] page-offset 549 364772
+[862400] [INF] [TRS] page-offset 550 365434
+[862400] [INF] [TRS] page-offset 551 366092
+[862400] [INF] [TRS] page-offset 552 366741
+[862401] [INF] [TRS] page-offset 553 367411
+[862401] [INF] [TRS] page-offset 554 368081
+[862401] [INF] [TRS] page-offset 555 368733
+[862401] [INF] [TRS] page-offset 556 369412
+[862401] [INF] [TRS] page-offset 557 370076
+[862401] [INF] [TRS] page-offset 558 370760
+[862401] [INF] [TRS] page-offset 559 371411
+[862401] [INF] [TRS] page-offset 560 372089
+[862401] [INF] [TRS] page-offset 561 372759
+[862401] [INF] [TRS] page-offset 562 373414
+[862401] [INF] [TRS] page-offset 563 374055
+[862402] [INF] [TRS] page-offset 564 374731
+[862402] [INF] [TRS] page-offset 565 375421
+[862402] [INF] [TRS] page-offset 566 376050
+[862402] [INF] [TRS] page-offset 567 376728
+[862402] [INF] [TRS] page-offset 568 377377
+[862402] [INF] [TRS] page-offset 569 378072
+[862402] [INF] [TRS] page-offset 570 378732
+[862402] [INF] [TRS] page-offset 571 379346
+[862402] [INF] [TRS] page-offset 572 380001
+[862402] [INF] [TRS] page-offset 573 380672
+[862402] [INF] [TRS] page-offset 574 381379
+[862403] [INF] [TRS] page-offset 575 382040
+[862403] [INF] [TRS] page-offset 576 382653
+[862403] [INF] [TRS] page-offset 577 383321
+[862403] [INF] [TRS] page-offset 578 383989
+[862403] [INF] [TRS] page-offset 579 384671
+[862403] [INF] [TRS] page-offset 580 385352
+[862403] [INF] [TRS] page-offset 581 386020
+[862404] [INF] [TRS] page-offset 582 386671
+[862404] [INF] [TRS] page-offset 583 387350
+[862404] [INF] [TRS] page-offset 584 388010
+[862404] [INF] [TRS] page-offset 585 388705
+[862404] [INF] [TRS] page-offset 586 389402
+[862404] [INF] [TRS] page-offset 587 390049
+[862404] [INF] [TRS] page-offset 588 390714
+[862404] [INF] [TRS] page-offset 589 391388
+[862404] [INF] [TRS] page-offset 590 392085
+[862404] [INF] [TRS] page-offset 591 392732
+[862405] [INF] [TRS] page-offset 592 393401
+[862405] [INF] [TRS] page-offset 593 394085
+[862405] [INF] [TRS] page-offset 594 394750
+[862405] [INF] [TRS] page-offset 595 395441
+[862405] [INF] [TRS] page-offset 596 396133
+[862405] [INF] [TRS] page-offset 597 396832
+[862405] [INF] [TRS] page-offset 598 397499
+[862405] [INF] [TRS] page-offset 599 398194
+[862406] [INF] [TRS] page-offset 600 398871
+[862406] [INF] [TRS] page-offset 601 399537
+[862406] [INF] [TRS] page-offset 602 400205
+[862406] [INF] [TRS] page-offset 603 400873
+[862406] [INF] [TRS] page-offset 604 401562
+[862406] [INF] [TRS] page-offset 605 402226
+[862406] [INF] [TRS] page-offset 606 402892
+[862406] [INF] [TRS] page-offset 607 403568
+[862406] [INF] [TRS] page-offset 608 404236
+[862407] [INF] [TRS] page-offset 609 404893
+[862407] [INF] [TRS] page-offset 610 405562
+[862407] [INF] [TRS] page-offset 611 406237
+[862407] [INF] [TRS] page-offset 612 406940
+[862407] [INF] [TRS] page-offset 613 407614
+[862407] [INF] [TRS] page-offset 614 408248
+[862407] [INF] [TRS] page-offset 615 408887
+[862407] [INF] [TRS] page-offset 616 409568
+[862407] [INF] [TRS] page-offset 617 410229
+[862407] [INF] [TRS] page-offset 618 410923
+[862407] [INF] [TRS] page-offset 619 411601
+[862408] [INF] [TRS] page-offset 620 412279
+[862408] [INF] [TRS] page-offset 621 412982
+[862408] [INF] [TRS] page-offset 622 413630
+[862408] [INF] [TRS] page-offset 623 414308
+[862408] [INF] [TRS] page-offset 624 414978
+[862408] [INF] [TRS] page-offset 625 415605
+[862408] [INF] [TRS] page-offset 626 416233
+[862408] [INF] [TRS] page-offset 627 416859
+[862408] [INF] [TRS] page-offset 628 417492
+[862408] [INF] [TRS] page-offset 629 418169
+[862408] [INF] [TRS] page-offset 630 418827
+[862409] [INF] [TRS] page-offset 631 419513
+[862409] [INF] [TRS] page-offset 632 420171
+[862409] [INF] [TRS] page-offset 633 420829
+[862409] [INF] [TRS] page-offset 634 421502
+[862409] [INF] [TRS] page-offset 635 422147
+[862409] [INF] [TRS] page-offset 636 422822
+[862409] [INF] [TRS] page-offset 637 423502
+[862409] [INF] [TRS] page-offset 638 424184
+[862409] [INF] [TRS] page-offset 639 424806
+[862409] [INF] [TRS] page-offset 640 425394
+[862409] [INF] [TRS] page-offset 641 426072
+[862410] [INF] [TRS] page-offset 642 426684
+[862410] [INF] [TRS] page-offset 643 427354
+[862410] [INF] [TRS] page-offset 644 428022
+[862410] [INF] [TRS] page-offset 645 428705
+[862410] [INF] [TRS] page-offset 646 429360
+[862410] [INF] [TRS] page-offset 647 430027
+[862410] [INF] [TRS] page-offset 648 430700
+[862410] [INF] [TRS] page-offset 649 431377
+[862410] [INF] [TRS] page-offset 650 432031
+[862410] [INF] [TRS] page-offset 651 432712
+[862410] [INF] [TRS] page-offset 652 433362
+[862411] [INF] [TRS] page-offset 653 434024
+[862411] [INF] [TRS] page-offset 654 434707
+[862411] [INF] [TRS] page-offset 655 435339
+[862411] [INF] [TRS] page-offset 656 436001
+[862411] [INF] [TRS] page-offset 657 436602
+[862411] [INF] [TRS] page-offset 658 437224
+[862411] [INF] [TRS] page-offset 659 437852
+[862411] [INF] [TRS] page-offset 660 438511
+[862411] [INF] [TRS] page-offset 661 439182
+[862411] [INF] [TRS] page-offset 662 439837
+[862412] [INF] [TRS] page-offset 663 440488
+[862412] [INF] [TRS] page-offset 664 441123
+[862412] [INF] [TRS] page-offset 665 441741
+[862412] [INF] [TRS] page-offset 666 442367
+[862412] [INF] [TRS] page-offset 667 443011
+[862431] [DBG] [TRS] Saved page index cache: 668 pages
+[862438] [DBG] [TRS] Loaded progress: page 181/668
+[862450] [DBG] [GFX] ensureSdCardFontReady: 1 glyph(s) not found
+[862459] [DBG] [SDCF] Kern classes + lig loaded: kernL=252, kernR=248, ligs=0
+[862484] [DBG] [SDCF] Built mini kern: 39×31 matrix (1209 bytes, full was 89×83 = 7387 bytes)
+[862484] [DBG] [FCM] prewarmCache(SD): 1 glyph(s) not found (styleMask=0x01)
+[862990] [DBG] [DSP] Panel update: mode=BALANCED panel=gray all=0 gray=1 effect=0 convert=18ms wait=362ms power_on=35ms rails_held=0 frames=14 waveform=14 frame_avg=21002us blit=156ms copy=66ms bus=110ms class=25ms cpu=240MHz total=380ms
+[870318] [INF] [MEM] Free: 236924 bytes, Total: 319392 bytes, Min Free: 223256 bytes, MaxAlloc: 212980 bytes

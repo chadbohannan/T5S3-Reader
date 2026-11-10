@@ -45,6 +45,15 @@ class HalStorage {
   bool openFileForWrite(const char* moduleName, const String& path, HalFile& file);
   bool removeDir(const char* path);
 
+  // Raw sector access for USB mass storage. Only valid when no file is open and
+  // nothing else uses the card (the host owns the filesystem while it is a drive).
+  uint32_t rawSectorCount();
+  bool rawReadSectors(uint32_t sector, uint8_t* dst, size_t count);
+  bool rawWriteSectors(uint32_t sector, const uint8_t* src, size_t count);
+  bool rawSync();
+  // FAT_TYPE_FAT12/16/32 (12, 16, 32) or FAT_TYPE_EXFAT (64); 0 if not mounted.
+  uint8_t fatType();
+
   static HalStorage& getInstance() { return instance; }
 
   class StorageLock;  // private class, used internally

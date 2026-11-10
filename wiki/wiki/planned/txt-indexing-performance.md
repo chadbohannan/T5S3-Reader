@@ -1,6 +1,6 @@
 # TXT indexing performance
 
-**Status: done in `ea452ff` (squashed from branch `index-perf`).** Indexing the 443,403-byte unwrapped `frankenstein.txt` fell from 31.7 s to 2.3 s on a T5S3 with identical page offsets. The lasting facts are on [reader activities](../components/reader-activities.md) and [GfxRenderer](../components/gfx-renderer.md); this page keeps the evidence, the measurements and the work that was left out.
+**Status: done in `ea452ff` (squashed from branch `index-perf`).** Indexing the 443,403-byte unwrapped `frankenstein.txt` fell from 31.7 s to 2.3 s on a T5S3 with identical page offsets, and to 1.67 s after the SdFat SPI change in `a8413ad` (2026-11-10). The lasting facts are on [reader activities](../components/reader-activities.md) and [GfxRenderer](../components/gfx-renderer.md); this page keeps the evidence, the measurements and the work that was left out.
 
 ## Observation
 
@@ -19,8 +19,9 @@ All runs: `t5s3-pro`, SD-card font, viewport 524x914 px, 21 lines per page, 668 
 | Baseline at `f460af3` | 31,732 ms | not split |
 | Single-pass breaker | 17,904 ms | file read 12,189 ms (68%), font setup 4,543 ms (25%), wrap 469 ms, yields 399 ms, other 238 ms |
 | + sequential reads | 2,291 ms | file read 809 ms, font setup 476 ms, wrap 423 ms, yields 342 ms, other 183 ms; 51 refills |
+| + `-DUSE_SPI_ARRAY_TRANSFER=1` (`a8413ad`) | 1,667 ms | file read 223 ms, font setup 420 ms, wrap 424 ms, yields 287 ms plus 70 ms outside the load loop, other 185 ms; 51 refills |
 
-The baseline offset list is kept in `20261109-txt-index-baseline-frankenstein-unwrapped.log` (in `sources/`). The single-pass and sequential builds each produced all 668 offsets identical to it, checked line by line with `cmp`. The hard-wrapped Gutenberg file was not captured, so that case is unchecked. The target in the plan was under 2 s; the result is 15% over, and the remainder is spread across read, font setup, wrap and yields with no dominant part.
+The baseline offset list is kept in `20261109-txt-index-baseline-frankenstein-unwrapped.log` (in `sources/`). The single-pass and sequential builds each produced all 668 offsets identical to it, checked line by line with `cmp`. The hard-wrapped Gutenberg file was not captured, so that case is unchecked. The target in the plan was under 2 s; the sequential build was 15% over. On 2026-11-10 the SdFat SPI change ([USB Storage Mode](usb-storage-mode.md), History) made the file read 3.6 times faster, and the total is now 17% under target. Its 668 offsets matched the baseline line by line again (`20261110-txt-index-after-spi-array-frankenstein-unwrapped.log` in `sources/`). The remainder is now font setup, wrap and yields in about equal parts; the file read is no longer the largest phase.
 
 ## What was done
 
@@ -36,7 +37,7 @@ The instrumentation must not distort what it measures: read `millis()` around th
 
 ## Left out
 
-- **Time-based yield** (for example every 50 ms) in place of the 743 `vTaskDelay(1)` calls, about 0.3 s now. `wrapSteps` resets on each page, so the yield fires about once per page.
+- **Time-based yield** (for example every 50 ms) in place of the 743 `vTaskDelay(1)` calls, about 0.36 s now, the largest single phase after font setup and wrap. `wrapSteps` resets on each page, so the yield fires about once per page.
 - **Background indexing**: render the first page at once and index the rest between renders. Page count and percent would stay unknown until it finishes.
 - **Hard-wrapped Gutenberg baseline** and a host unit test in `test/` that compares offsets for fixed widths.
 - **The page-render path** still reads an 8 KB chunk per page turn. It now uses the single-pass breaker, but not the sliding buffer.
