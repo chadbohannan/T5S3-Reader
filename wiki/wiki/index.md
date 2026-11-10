@@ -16,6 +16,7 @@ The structured routing layer for the wiki. Each entry links to a page with a one
 - [EPUB engine](components/epub-engine.md) — Epub, book.bin, CSS cache, Section build and cache key, hyphenation, images
 - [Reader activities](components/reader-activities.md) — format dispatch, EpubReader sub-activities, KOReader sync, TXT/XTC, OPDS
 - [Settings and state](components/settings-and-state.md) — SETTINGS table shared by menu/JSON/web, APP_STATE, stores, bin→JSON migration
+- [USB Storage Mode](components/usb-storage-mode.md) — T5S3 home item that reboots into a read/write USB drive for the SD card: RTC boot flag, HalUsbMsc (TinyUSB MSC+CDC, read-ahead), status screen with exit lock, USB pin handback on exit
 - [Web server](components/web-server.md) — STA/AP file transfer, HTTP routes, WebSocket :81, UDP discovery, WebDAV, cache clearing
 - [ActivityManager](components/activity-manager.md) — singleton for navigation, activity stack, input routing and the single render task
 - [Activity](components/activity.md) — base class for screens: lifecycle, touch hooks, result passing
@@ -36,5 +37,5 @@ The structured routing layer for the wiki. Each entry links to a page with a one
 
 ## Planned
 - [TXT indexing performance](planned/txt-indexing-performance.md) — done in ea452ff; single-pass line breaker and sequential reads cut indexing of a 443 KB unwrapped file from 31.7 s to 2.3 s with identical offsets; measurements and left-out work
-- [USB Storage Mode](planned/usb-storage-mode.md) — in progress, spike (branch usb-drive); home-screen item that reboots into a dedicated read/write USB mass-storage mode with nothing shared; status screen with mount status, exit lock, risks (hardware CDC to TinyUSB switch), verification
+- [USB Storage Mode](planned/usb-storage-mode.md) — done, merged 2026-11-10; decisions, history (spike, exit pin fix, throughput 0.31/0.34 to 0.66/0.94 MB/s), open device tests and LOG_* routing
 - [Fast, high-quality page render](planned/fast-quality-page-render.md) — in progress (steps 1–5 implemented, 3–5 pending visual check: Quality 1.34→0.35 s, real grays in Standard); measured panel timings (22–34 ms/frame, 0.7–1.3 s per turn), dithered AA in Standard, sweep cost; plan to ~170 ms with real grays
