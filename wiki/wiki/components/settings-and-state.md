@@ -14,11 +14,13 @@ Adding a setting therefore means adding one field and one `SettingInfo` entry; t
 
 String settings marked `obfuscated` are stored as `<key>_obf`: XOR with the chip's 6-byte eFuse MAC, then base64 (`lib/Serialization/ObfuscationUtils`). The header says this is not encryption; it only stops casual reading of passwords on a card moved to another device, and a file copied between devices will not decode.
 
-Settings that matter elsewhere in the wiki: `readerDisplayMode` (Fast/Standard/Quality → refresh mode, see [HalDisplay](hal-display.md)), the refresh frequency, `textAntiAliasing`, `sleepScreen` and `powerOffScreen`, the sleep timeout (1, 5, 10, 15 or 30 min), `resumeReaderOnBoot`, `flipUi`, `sideButtonLayout`, the `frontButton*` remap, `doubleClickHomeMenu`, `backlightLevel`, `sdFontFamilyName`, and the RTC fields (`timeZoneId`, `rtcStoresUtc`, `rtcVariantHint`, `rtcReferenceEpoch`). Every layout setting is part of the section cache key ([EPUB engine](epub-engine.md)).
+The sleep-screen settings (`sleepScreen`, `powerOffScreen`, and their cover mode and filter) and the recent sleep-image ring in `CrossPointState` were removed on the `simple_sleep` branch in 2026-11, when sleep became screen-preserving only ([power and sleep](../concepts/power-and-sleep.md)). The legacy `settings.bin` and `state.bin` migration readers still read and drop those bytes, so old files load.
+
+Settings that matter elsewhere in the wiki: `readerDisplayMode` (Fast/Standard/Quality → refresh mode, see [HalDisplay](hal-display.md)), the refresh frequency, `textAntiAliasing`, the sleep timeout (1, 5, 10, 15 or 30 min), `resumeReaderOnBoot`, `flipUi`, `sideButtonLayout`, the `frontButton*` remap, `doubleClickHomeMenu`, `backlightLevel`, `sdFontFamilyName`, and the RTC fields (`timeZoneId`, `rtcStoresUtc`, `rtcVariantHint`, `rtcReferenceEpoch`). Every layout setting is part of the section cache key ([EPUB engine](epub-engine.md)).
 
 ## APP_STATE
 
-`CrossPointState` holds `openEpubPath` (the book to resume), `lastSleepFromReader`, `readerActivityLoadCount` (the boot-loop guard described in [T5S3 Reader firmware](../systems/t5s3-reader-firmware.md)), and a 16-entry ring of recent sleep-image indexes so the `CUSTOM` sleep screen does not repeat images. It is saved before every sleep and power-off ([power and sleep](../concepts/power-and-sleep.md)).
+`CrossPointState` holds `openEpubPath` (the book to resume), `lastSleepFromReader`, `readerActivityLoadCount` (the boot-loop guard described in [T5S3 Reader firmware](../systems/t5s3-reader-firmware.md)). It is saved before every sleep and power-off ([power and sleep](../concepts/power-and-sleep.md)).
 
 ## Stores
 

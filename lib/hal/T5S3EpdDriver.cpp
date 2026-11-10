@@ -460,6 +460,12 @@ void T5S3EpdDriver::wait() const {
   }
 }
 
+void T5S3EpdDriver::adoptTargetAsCurrent() {
+  wait();
+  memcpy(current_, target_, IMAGE_BYTES);
+  stateKnown_ = true;
+}
+
 void T5S3EpdDriver::powerDown() {
   if (!task_) {
     return;
@@ -563,6 +569,16 @@ void T5S3EpdDriver::runUpdate() {
   }
   Stats stats;
   stats.railsWereOn = railsOn_;
+
+  // Changed-pixels-only modes have nothing to drive when the image is
+  // unchanged: skip power-on and the scan entirely. Quality/Text redrive
+  // unchanged pixels on purpose (ghost cleanup), so they always run.
+  const bool changedOnly = request.mode == Mode::Gray || request.mode == Mode::Fastest;
+  if (stateKnown_ && changedOnly && !request.allPixels && memcmp(current_, target_, IMAGE_BYTES) == 0) {
+    stats_ = stats;
+    busy_ = false;
+    return;
+  }
 
   const size_t waveformFrames = buildFrameTables(request);
   int maxOffset = 0;

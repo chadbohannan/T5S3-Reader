@@ -174,8 +174,9 @@ bool CrossPointSettings::loadFromBinaryFile() {
 
   uint8_t settingsRead = 0;
   bool frontButtonMappingRead = false;
+  uint8_t removedSetting = 0;  // fields of removed settings are read and dropped
   do {
-    readAndValidate(inputFile, sleepScreen, SLEEP_SCREEN_MODE_COUNT);
+    serialization::readPod(inputFile, removedSetting);  // legacy sleepScreen
     if (++settingsRead >= fileSettingsCount) break;
     serialization::readPod(inputFile, extraParagraphSpacing);
     if (++settingsRead >= fileSettingsCount) break;
@@ -203,7 +204,7 @@ bool CrossPointSettings::loadFromBinaryFile() {
     if (++settingsRead >= fileSettingsCount) break;
     serialization::readPod(inputFile, screenMargin);
     if (++settingsRead >= fileSettingsCount) break;
-    readAndValidate(inputFile, sleepScreenCoverMode, SLEEP_SCREEN_COVER_MODE_COUNT);
+    serialization::readPod(inputFile, removedSetting);  // legacy sleepScreenCoverMode
     if (++settingsRead >= fileSettingsCount) break;
     {
       std::string urlStr;
@@ -234,7 +235,7 @@ bool CrossPointSettings::loadFromBinaryFile() {
       opdsPassword[sizeof(opdsPassword) - 1] = '\0';
     }
     if (++settingsRead >= fileSettingsCount) break;
-    readAndValidate(inputFile, sleepScreenCoverFilter, SLEEP_SCREEN_COVER_FILTER_COUNT);
+    serialization::readPod(inputFile, removedSetting);  // legacy sleepScreenCoverFilter
     if (++settingsRead >= fileSettingsCount) break;
     serialization::readPod(inputFile, uiTheme);
     if (++settingsRead >= fileSettingsCount) break;

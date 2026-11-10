@@ -1037,7 +1037,11 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
     // Step 1: Display page with image area blanked (text appears, image area white)
     // Step 2: Re-render with images and display again (images appear clean)
     int16_t imgX, imgY, imgW, imgH;
-    if (page->getImageBoundingBox(imgX, imgY, imgW, imgH)) {
+    if (display.isResumingFromSleep()) {
+      // Waking onto the page that is already on the panel: no blanking pass, the
+      // display only drives what differs.
+      renderer.displayBuffer(HalDisplay::FAST_REFRESH);
+    } else if (page->getImageBoundingBox(imgX, imgY, imgW, imgH)) {
       renderer.fillRect(imgX + orientedMarginLeft, imgY + orientedMarginTop, imgW, imgH, false);
       renderer.displayBuffer(HalDisplay::FAST_REFRESH);
 

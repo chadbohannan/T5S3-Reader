@@ -197,60 +197,41 @@ bool shouldSuppressDeepSleepForDebug() {
 #endif
 }
 
-void enterDeepSleepKeepingScreen(bool wakeOnTouch = true) {
+// Sleep is meant to be invisible: the front light goes out and the page stays on the
+// e-ink panel. Nothing is drawn. The panel image is saved so that waking does not
+// have to redraw it (see HalDisplay::saveSleepFrame).
+void enterDeepSleepKeepingScreen(bool wakeOnTouch = true, bool saveFrame = true) {
   HalPowerManager::Lock powerLock;
-  APP_STATE.lastSleepFromReader = APP_STATE.lastSleepFromReader || activityManager.isReaderActivityInStack();
-  APP_STATE.saveToFile();
-
   Board::setBacklightLevel(0);
+  if (saveFrame) {
+    APP_STATE.lastSleepFromReader = activityManager.isReaderActivityInStack();
+    APP_STATE.saveToFile();
+    display.saveSleepFrame();
+  }
+
   halTiltSensor.deepSleep();
   display.deepSleep();
-  LOG_DBG("MAIN", "Entering deep sleep with current screen preserved, wakeOnTouch=%d", wakeOnTouch ? 1 : 0);
+  LOG_DBG("MAIN", "Entering deep sleep, wakeOnTouch=%d", wakeOnTouch ? 1 : 0);
 
   powerManager.startDeepSleep(gpio, wakeOnTouch);
 }
 
-// Enter deep sleep mode
 void enterDeepSleep() {
   if (shouldSuppressDeepSleepForDebug()) {
     LOG_DBG("MAIN", "Deep sleep suppressed while serial is connected");
     waitForPowerRelease();
     return;
   }
-
-  if (SETTINGS.sleepScreen == CrossPointSettings::SLEEP_SCREEN_MODE::KEEP_LAST) {
-    enterDeepSleepKeepingScreen(true);
-    return;
-  }
-
-  HalPowerManager::Lock powerLock;  // Ensure we are at normal CPU frequency for sleep preparation
-  APP_STATE.lastSleepFromReader = APP_STATE.lastSleepFromReader || activityManager.isReaderActivityInStack();
-  APP_STATE.saveToFile();
-
-  activityManager.goToSleep();
-  Board::setBacklightLevel(0);
-
-  halTiltSensor.deepSleep();
-  display.deepSleep();
-  LOG_DBG("MAIN", "Entering deep sleep");
-
-  powerManager.startDeepSleep(gpio);
+  enterDeepSleepKeepingScreen(true);
 }
 
-void enterPowerOffKeepingScreen(const char* status) {
-  (void)status;  // Status line intentionally not shown; the sleep screen setting is used instead.
+// Power-off also leaves the last page on the panel.
+void enterPowerOffKeepingScreen() {
   {
     HalPowerManager::Lock powerLock;
+    Board::setBacklightLevel(0);
     APP_STATE.lastSleepFromReader = activityManager.isReaderActivityInStack();
     APP_STATE.saveToFile();
-
-    // KEEP_LAST leaves the current framebuffer as-is. Other modes render a sleep/power-off
-    // screen first because display.deepSleep() also disconnects the SD card
-    // (Board::deinitForSleep), which custom/cover images may need to read.
-    if (SETTINGS.powerOffScreen != CrossPointSettings::SLEEP_SCREEN_MODE::KEEP_LAST) {
-      activityManager.goToSleep(/*poweringOff=*/true);
-    }
-    Board::setBacklightLevel(0);
     display.deepSleep();
     if (Board::capabilities().hasHardPowerOff) {
       if (Board::shutdownBatteryPower()) {
@@ -264,7 +245,9 @@ void enterPowerOffKeepingScreen(const char* status) {
     }
   }
 
-  enterDeepSleepKeepingScreen(false);
+  // The SD card is already released here, so the frame is not saved; the next
+  // boot redraws the panel once.
+  enterDeepSleepKeepingScreen(/*wakeOnTouch=*/false, /*saveFrame=*/false);
 }
 
 // Set by activities (e.g. the reader menu's Shut Down button) to request a full
@@ -437,6 +420,9 @@ void setup() {
 
   setupDisplayAndFonts();
   display.setFlipOutput(SETTINGS.flipUi != 0);
+  // After a deep-sleep wake the panel still shows the page it slept on; reload its
+  // image so the first render below only touches pixels that changed.
+  display.restoreSleepFrame();
 
   APP_STATE.loadFromFile();
   RECENT_BOOKS.loadFromFile();
@@ -485,7 +471,7 @@ void loop() {
   // Handle a shutdown requested by an activity (e.g. the reader menu Shut Down button).
   if (g_shutdownRequested) {
     g_shutdownRequested = false;
-    enterPowerOffKeepingScreen("");
+    enterPowerOffKeepingScreen();
     return;
   }
 
@@ -572,7 +558,7 @@ void loop() {
       if (!powerButtonLongPressHandled && gpio.getHeldTime() >= kEpd47PowerOffHoldMs) {
         LOG_DBG("MAIN", "EPD47 power button long press requested deep-sleep power-off");
         powerButtonLongPressHandled = true;
-        enterPowerOffKeepingScreen("Powered off");
+        enterPowerOffKeepingScreen();
         return;
       }
     } else {
@@ -610,7 +596,7 @@ void loop() {
   } else if (!pcaPowerOffHandled && gpio.getHeldTime() >= kPcaButtonPowerOffHoldMs) {
     LOG_DBG("MAIN", "PCA9535 button long press BQ25896 shutdown request");
     pcaPowerOffHandled = true;
-    enterPowerOffKeepingScreen("Shutting down...");
+    enterPowerOffKeepingScreen();
     return;
   }
 

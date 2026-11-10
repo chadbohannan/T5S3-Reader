@@ -226,6 +226,12 @@ void HalDisplay::deepSleep() {
   Board::deinitForSleep();
 }
 
+// The EPD47 driver redraws every pixel on each update, so there is no panel
+// state to carry across sleep.
+void HalDisplay::saveSleepFrame() {}
+
+bool HalDisplay::restoreSleepFrame() { return false; }
+
 uint8_t* HalDisplay::getFrameBuffer() const { return frameBuffer; }
 
 void HalDisplay::copyGrayscaleBuffers(const uint8_t* lsbBuffer, const uint8_t* msbBuffer) {

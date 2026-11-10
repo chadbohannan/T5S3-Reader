@@ -96,6 +96,15 @@ class T5S3EpdDriver {
   // wait(), then switch the panel rails off immediately (before sleep).
   void powerDown();
 
+  // The image the driver believes the panel shows. Valid once stateKnown().
+  // Read it only while !busy().
+  const uint8_t* current() const { return current_; }
+  bool stateKnown() const { return stateKnown_; }
+  // Declare that the panel already shows target() (e.g. after waking from
+  // deep sleep, where the image survived but RAM did not). Later updates are
+  // then differential against it instead of driving every pixel.
+  void adoptTargetAsCurrent();
+
   Stats lastStats() const { return stats_; }
 
   // Rails stay on this long after an update (VCOM is held without driving;

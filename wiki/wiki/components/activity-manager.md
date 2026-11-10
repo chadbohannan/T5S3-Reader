@@ -17,13 +17,12 @@ The class is in `src/activities/ActivityManager.{h,cpp}`. The singleton `activit
 
 ## Navigation
 
-`replaceActivity()` is the base for all top-level moves. If there is a current activity, the new one is deferred as a `Replace`. If not (boot), it starts at once. A replace calls `onExit()` on the current activity and on every stacked activity, then clears the stack. The `goTo*` helpers wrap it: `goHome`, `goToReader`, `goToSettings`, `goToFileBrowser`, `goToRecentBooks`, `goToBrowser` (OPDS), `goToFileTransfer`, `goToSleep`, `goToBoot`, `goToFullScreenMessage`, `goToCrashReport`.
+`replaceActivity()` is the base for all top-level moves. If there is a current activity, the new one is deferred as a `Replace`. If not (boot), it starts at once. A replace calls `onExit()` on the current activity and on every stacked activity, then clears the stack. The `goTo*` helpers wrap it: `goHome`, `goToReader`, `goToSettings`, `goToFileBrowser`, `goToRecentBooks`, `goToBrowser` (OPDS), `goToFileTransfer`, `goToBoot`, `goToFullScreenMessage`, `goToCrashReport`.
 
 Details that differ from the guide's description:
 
 - Each replace sets the next display refresh mode. Page-style moves (home, settings, file browser, recent books) use `HALF_REFRESH`. The default for a bare `replaceActivity` is `FULL_REFRESH`. `goToReader` takes the mode as an argument and defaults to `HALF_REFRESH`; it opens the dispatcher described in [reader activities](reader-activities.md). The mode is applied through `HalDisplay::requestNextRefresh()` (see [HalDisplay](hal-display.md)). Push and pop always request `HALF_REFRESH`.
 - `goToBrowser()` skips the server list when exactly one OPDS server is configured.
-- `goToSleep(poweringOff)` calls `loop()` itself after queuing the replace. The caller sleeps right after, so the sleep screen must render first.
 - Push and pop use `startActivityForResult()`, `setResult()` and `finish()` on [Activity](activity.md). On pop the manager moves out the child's `ActivityResult`, destroys the child, restores the parent, runs the parent's result handler with no lock held, and then calls `requestUpdate()` unless the handler queued another action. If the stack is empty on pop, it calls `goHome()`.
 
 ## Input routing in loop()

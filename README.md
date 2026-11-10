@@ -37,7 +37,7 @@ GPIO21 for wake, and cannot wake from touch.
 - TXT / Markdown reading.
 - XTC reading.
 - BMP image viewer.
-- Recent books, file browser, reading cache, cover images, and sleep screen images.
+- Recent books, file browser, reading cache, and cover images.
 - Wi-Fi file upload and web-based file management.
 - Configurable fonts, font size, line spacing, margins, orientation, and refresh mode.
 - Auto power-off after long inactivity when USB is not connected.
@@ -146,8 +146,6 @@ Recommended layout:
   Books/
     book.epub
     novel.txt
-  .sleep/
-    sleep.bmp
 ```
 
 The firmware creates a `.crosspoint/` directory on the SD card for settings, reading progress, cache, and cover thumbnails. If cache corruption or repeated crashes occur, back up the SD card and delete `.crosspoint/` to let the firmware regenerate it.
@@ -235,7 +233,6 @@ In `Settings`, you can configure:
 - Refresh mode: quality, balanced, or fast.
 - EPUB image rendering: show images, placeholders, or hide images.
 - Sleep / power-off timeout.
-- Sleep screen: default image, blank screen, custom BMP, or book cover.
 - Button mapping.
 - Wi-Fi networks.
 

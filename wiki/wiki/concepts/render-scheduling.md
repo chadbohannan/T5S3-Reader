@@ -10,6 +10,6 @@ Notifications use `eIncrement`, so rapid requests are counted, not lost. A rende
 
 For what a reader `render()` does once the task runs, see the [page render pipeline](page-render-pipeline.md).
 
-After a pop, the manager calls `requestUpdate()` for the restored parent automatically. `goToSleep()` is a special case: it runs `loop()` inline to render the sleep screen before the device sleeps.
+After a pop, the manager calls `requestUpdate()` for the restored parent automatically.
 
 The main loop in `src/main.cpp` ends with `delay()`: 10 ms normally, 50 ms after a long idle, and `yield()` only when the current activity returns true from `skipLoopDelay()` (for example, the web server).

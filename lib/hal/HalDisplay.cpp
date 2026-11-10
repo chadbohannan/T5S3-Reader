@@ -3,8 +3,12 @@
 #if defined(BOARD_T5S3_PRO) || defined(BOARD_T5S3)
 
 #include <Board.h>
+#include <HalStorage.h>
 #include <Logging.h>
+#include <esp_attr.h>
 #include <esp_heap_caps.h>
+#include <esp_random.h>
+#include <esp_rom_crc.h>
 
 #include <cstring>
 
@@ -258,6 +262,33 @@ bool HalDisplay::convertGrayToPanel() const {
   return grayBits != 0;
 }
 
+namespace {
+// Panel image saved across deep sleep. The file holds the driver's 2 bpp
+// physical-order image; the RTC record ties it to this particular sleep, so a
+// stale file (older sleep, card swapped, cold boot) is never trusted.
+constexpr char kSleepFrameDir[] = "/.crosspoint";
+constexpr char kSleepFramePath[] = "/.crosspoint/sleep_frame.bin";
+constexpr uint32_t kSleepFrameMagic = 0x464C5053;  // "SPLF"
+constexpr uint32_t kSleepFrameVersion = 1;
+
+struct SleepFrameHeader {
+  uint32_t magic;
+  uint32_t version;
+  uint32_t token;
+  uint32_t crc;
+  uint32_t size;
+};
+
+struct SleepFrameRecord {
+  uint32_t magic;
+  uint32_t token;
+  uint32_t crc;
+};
+
+// Zeroed on cold boot, kept across deep sleep.
+RTC_DATA_ATTR SleepFrameRecord gSleepFrameRecord;
+}  // namespace
+
 void HalDisplay::pushToPanel(const RefreshMode mode, const uint8_t panelMode, const bool allPixels,
                              const bool hasGray, const uint32_t convertUs) {
   T5S3EpdDriver::UpdateRequest request;
@@ -265,7 +296,19 @@ void HalDisplay::pushToPanel(const RefreshMode mode, const uint8_t panelMode, co
   request.allPixels = allPixels;
   request.hasGrayTargets = hasGray;
 
-  const DisplayEffect effect = (mode == FULL_REFRESH) ? EFFECT_NONE : pendingDisplayEffect;
+  // The panel is about to change; a frame saved for an earlier sleep no longer matches it.
+  gSleepFrameRecord.magic = 0;
+
+  DisplayEffect effect = (mode == FULL_REFRESH) ? EFFECT_NONE : pendingDisplayEffect;
+  if (resumingFromSleep) {
+    // First update after a deep-sleep wake: the panel already shows the restored
+    // frame. Drive only what differs (usually nothing, or the status bar) with no
+    // eraser pass, so waking is invisible apart from the front light.
+    request.mode = PanelMode::Gray;
+    request.allPixels = false;
+    effect = EFFECT_NONE;
+    resumingFromSleep = false;
+  }
   switch (effect) {
     case EFFECT_READER_TURN_FORWARD_STANDARD:
     case EFFECT_READER_TURN_BACKWARD_STANDARD:
@@ -381,6 +424,73 @@ void HalDisplay::deepSleep() {
     epd->powerDown();
   }
   Board::deinitForSleep();
+}
+
+void HalDisplay::saveSleepFrame() {
+  gSleepFrameRecord.magic = 0;
+  if (!displayReady || !epd) {
+    return;
+  }
+  epd->wait();
+  if (!epd->stateKnown()) {
+    // Nothing was ever drawn this boot; the panel content is unknown.
+    return;
+  }
+  const uint32_t t0 = millis();
+  const uint8_t* image = epd->current();
+  SleepFrameHeader header{kSleepFrameMagic, kSleepFrameVersion, esp_random(),
+                          esp_rom_crc32_le(0, image, T5S3EpdDriver::IMAGE_BYTES), T5S3EpdDriver::IMAGE_BYTES};
+
+  Storage.mkdir(kSleepFrameDir);
+  // Fixed-size file rewritten in place (no truncate): no cluster reallocation per sleep.
+  HalFile file = Storage.open(kSleepFramePath, O_RDWR | O_CREAT);
+  if (!file) {
+    LOG_ERR("DSP", "Sleep frame: cannot open %s", kSleepFramePath);
+    return;
+  }
+  const bool ok = file.write(&header, sizeof(header)) == sizeof(header) &&
+                  file.write(image, T5S3EpdDriver::IMAGE_BYTES) == T5S3EpdDriver::IMAGE_BYTES;
+  file.close();
+  if (!ok) {
+    LOG_ERR("DSP", "Sleep frame: write failed");
+    return;
+  }
+  gSleepFrameRecord = SleepFrameRecord{kSleepFrameMagic, header.token, header.crc};
+  LOG_DBG("DSP", "Sleep frame saved in %lums", static_cast<unsigned long>(millis() - t0));
+}
+
+bool HalDisplay::restoreSleepFrame() {
+  const SleepFrameRecord record = gSleepFrameRecord;
+  gSleepFrameRecord.magic = 0;  // single use
+  resumingFromSleep = false;
+  if (record.magic != kSleepFrameMagic || !displayReady || !epd) {
+    return false;
+  }
+  const uint32_t t0 = millis();
+  HalFile file = Storage.open(kSleepFramePath, O_RDONLY);
+  if (!file) {
+    LOG_ERR("DSP", "Sleep frame: cannot open %s", kSleepFramePath);
+    return false;
+  }
+  SleepFrameHeader header{};
+  epd->wait();
+  uint8_t* image = epd->target();
+  bool ok = file.read(&header, sizeof(header)) == sizeof(header) && header.magic == kSleepFrameMagic &&
+            header.version == kSleepFrameVersion && header.token == record.token &&
+            header.crc == record.crc && header.size == T5S3EpdDriver::IMAGE_BYTES &&
+            file.read(image, T5S3EpdDriver::IMAGE_BYTES) == static_cast<int>(T5S3EpdDriver::IMAGE_BYTES);
+  file.close();
+  ok = ok && esp_rom_crc32_le(0, image, T5S3EpdDriver::IMAGE_BYTES) == record.crc;
+  if (!ok) {
+    LOG_ERR("DSP", "Sleep frame: missing, stale or corrupt; next update redraws the panel");
+    return false;
+  }
+  epd->adoptTargetAsCurrent();
+  resumingFromSleep = true;
+  forceFullRefresh = false;
+  forcedRefreshPending = false;
+  LOG_DBG("DSP", "Sleep frame restored in %lums", static_cast<unsigned long>(millis() - t0));
+  return true;
 }
 
 uint8_t* HalDisplay::getFrameBuffer() const { return frameBuffer; }

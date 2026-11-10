@@ -62,6 +62,17 @@ class HalDisplay {
   // Power management
   void deepSleep();
 
+  // Transparent sleep. E-ink keeps its image without power, but deep sleep
+  // loses the driver's record of it, so the first update after wake would have
+  // to drive every pixel (a visible flash). saveSleepFrame() stores the panel
+  // image on the SD card before sleep (call it while the card is mounted);
+  // restoreSleepFrame() reloads it after a deep-sleep wake. Until the first
+  // panel update after a restore, isResumingFromSleep() is true and that
+  // update only drives pixels that differ, whatever refresh mode is asked for.
+  void saveSleepFrame();
+  bool restoreSleepFrame();
+  bool isResumingFromSleep() const { return resumingFromSleep; }
+
   // Access to frame buffer
   uint8_t* getFrameBuffer() const;
 
@@ -95,6 +106,7 @@ class HalDisplay {
   bool displayReady = false;
   bool flipOutput = false;
   bool forceFullRefresh = true;
+  bool resumingFromSleep = false;
   bool forcedRefreshPending = false;
   RefreshMode forcedRefreshMode = RefreshMode::HALF_REFRESH;
   DisplayEffect pendingDisplayEffect = DisplayEffect::EFFECT_NONE;

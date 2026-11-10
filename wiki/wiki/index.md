@@ -9,7 +9,7 @@ The structured routing layer for the wiki. Each entry links to a page with a one
 
 ## Components
 - [Board abstraction](components/board-abstraction.md) — compile-time T5S3/EPD47 facade, hardware matrix, capability flags, board ID marker, I2C lock
-- [HalDisplay](components/hal-display.md) — framebuffer in PSRAM, refresh modes and fast-refresh escalation, grayscale planes, T5S3 panel power sequence
+- [HalDisplay](components/hal-display.md) — framebuffer in PSRAM, refresh modes and fast-refresh escalation, grayscale planes, T5S3 panel power sequence, sleep frame save/restore
 - [GfxRenderer](components/gfx-renderer.md) — drawing API, orientation, font registration, render modes, chunked BW buffer backup
 - [Input pipeline](components/input-pipeline.md) — HalGPIO buttons/touch, side-button mapping in main loop, MappedInputManager
 - [Font system](components/font-system.md) — built-in and compressed fonts, SD `.cpfont` families, per-page glyph prewarm
@@ -27,7 +27,7 @@ The structured routing layer for the wiki. Each entry links to a page with a one
 - [Render scheduling](concepts/render-scheduling.md) — requestUpdate, immediate and wait variants, and their limits
 - [Page render pipeline](concepts/page-render-pipeline.md) — one EPUB page from input to panel: section, prewarm, BW, grayscale AA, refresh cadence
 - [SD card layout](concepts/sd-card-layout.md) — /.crosspoint files, cache versions and invalidation; docs/file-formats.md is stale
-- [Power and sleep](concepts/power-and-sleep.md) — CPU down-clock, auto sleep, sleep screens, power-off/battery cut, wake reasons
+- [Power and sleep](concepts/power-and-sleep.md) — CPU down-clock, invisible deep sleep (saved panel frame, no redraw on wake), power-off/battery cut, wake reasons
 - [Firmware update](concepts/firmware-update.md) — partitions, merged image, SD flasher with board check, recovery mode, OTA (points at upstream repo)
 
 ## Runbooks

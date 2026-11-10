@@ -22,7 +22,7 @@ Welcome to the **CrossPoint** firmware. This guide outlines the hardware control
       - [3.6.4 System](#364-system)
       - [3.6.5 OPDS Servers (Multiple Libraries)](#365-opds-servers-multiple-libraries)
       - [3.6.6 KOReader Sync Quick Setup](#366-koreader-sync-quick-setup)
-    - [3.7 Sleep Screen](#37-sleep-screen)
+    - [3.7 Sleep](#37-sleep)
   - [4. Reading Mode](#4-reading-mode)
     - [Page Turning](#page-turning)
     - [Chapter Navigation](#chapter-navigation)
@@ -125,21 +125,6 @@ The Settings screen allows you to configure the device's behavior. There are a f
   - `2` (default) - Turn the backlight on at a dim reading level
   - `10` - Maximum brightness
   - The backlight turns off automatically when the device sleeps or powers off, and restores the saved level on wake/boot
-- **Sleep Screen**: Which sleep screen to display when the device sleeps:
-  - "Dark" (default) - The default dark Crosspoint logo sleep screen
-  - "Light" - The same default sleep screen, on a white background
-  - "Custom" - Custom images from the SD card; see [Sleep Screen](#37-sleep-screen) below for more information
-  - "Cover" - The book cover image (Note: this is experimental and may not work as expected)
-  - "None" - A blank screen
-  - "Cover + Custom" - The book cover image, falls back to "Custom" behavior
-  - "Keep Last Page" - Leave whatever is currently on screen (no sleep artwork redraw)
-- **Sleep Screen Cover Mode**: How to display the book cover when "Cover" sleep screen is selected:
-  - "Fit" (default) - Scale the image down to fit centered on the screen, padding with white borders as necessary
-  - "Crop" - Scale the image down and crop as necessary to try to fill the screen (Note: this is experimental and may not work as expected)
-- **Sleep Screen Cover Filter**: What filter will be applied to the book cover when "Cover" sleep screen is selected:
-  - "None" (default) - The cover image will be converted to a grayscale image and displayed as it is
-  - "Contrast" - The image will be displayed as a black & white image without grayscale conversion
-  - "Inverted" - The image will be inverted as in white & black and will be displayed without grayscale conversion
 - **Status Bar**: Configure the status bar displayed while reading:
   - "None" - No status bar
   - "No Progress" - Show status bar without reading progress
@@ -342,39 +327,11 @@ If you use the HTTPS listener, use `https://<server-ip>:7200` (`curl -k` only fo
    - Choose **Apply Remote** to jump to remote progress.
    - Choose **Upload Local** to push current progress.
 
-### 3.7 Sleep Screen
+### 3.7 Sleep
 
-The **Sleep Screen** setting controls what is displayed when the device goes to sleep:
+Sleep is designed to be invisible. When the device sleeps, the front light turns off and the current page stays on the screen; nothing is drawn. When it wakes (power button or a touch), the front light turns back on and you continue where you were. The page is not redrawn, so the screen does not flash. Only items that changed while it slept, such as the battery level, are updated.
 
-| Mode | Behavior |
-|------|----------|
-| **Dark** (default) | The CrossPoint logo on a dark background. |
-| **Light** | The CrossPoint logo on a white background. |
-| **Custom** | A custom image from the SD card (see below). Falls back to **Dark** if no custom image is found. |
-| **Cover** | The cover of the currently open book. Falls back to **Dark** if no book is open. |
-| **Cover + Custom** | The cover of the currently open book. Falls back to **Custom** behavior if no book is open. |
-| **None** | A blank screen. |
-| **Keep Last Page** | Leaves the current display content unchanged (no logo, cover, or blank redraw). |
-
-#### Cover settings
-
-When using **Cover** or **Cover + Custom**, two additional settings apply:
-
-- **Sleep Screen Cover Mode**: **Fit** (scale to fit, white borders) or **Crop** (scale and crop to fill the screen).
-- **Sleep Screen Cover Filter**: **None** (grayscale), **Contrast** (black & white), or **Inverted** (inverted black & white).
-
-#### Custom images
-
-To use custom sleep images, set the sleep screen mode to **Custom** or **Cover + Custom**, then place images on the SD card:
-
-- **Multiple Images (recommended):** Create a `.sleep` directory in the root of the SD card and place any number of `.bmp` images inside. One will be randomly selected each time the device sleeps. (A directory named `sleep` is also accepted as a fallback.)
-- **Single Image:** Place a file named `sleep.bmp` in the root directory. This is used as a fallback if no valid images are found in the `.sleep`/`sleep` directory.
-
-> [!TIP]
-> For best results:
-> - Use uncompressed BMP files with 24-bit color depth
-> - X4: Use a resolution of 480x800 pixels to match the device's screen resolution.
-> - X3: Use a resolution of 528x792 pixels to match the device's screen resolution.
+Power-off also leaves the last page on the screen.
 
 ---
 
@@ -436,7 +393,7 @@ Accessible by pressing **Confirm** while inside a book.
 Please note that this firmware is currently in active development. The following features are **not yet supported** but are planned for future updates:
 
 * **Images:** Embedded images in e-books will not render.
-* **Cover Images:** Large cover images embedded into EPUB require several seconds (~10s for ~2000 pixel tall image) to convert for sleep screen and home screen thumbnail. Consider optimizing the EPUB with e.g. https://github.com/bigbag/epub-to-xtc-converter to speed this up.
+* **Cover Images:** Large cover images embedded into EPUB require several seconds (~10s for ~2000 pixel tall image) to convert for the home screen thumbnail. Consider optimizing the EPUB with e.g. https://github.com/bigbag/epub-to-xtc-converter to speed this up.
 
 ---
 

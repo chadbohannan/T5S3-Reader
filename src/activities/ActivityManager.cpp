@@ -6,7 +6,6 @@
 #include "GlobalMenuActivity.h"
 #include "OpdsServerStore.h"
 #include "boot_sleep/BootActivity.h"
-#include "boot_sleep/SleepActivity.h"
 #include "browser/OpdsBookBrowserActivity.h"
 #include "home/CrashActivity.h"
 #include "home/FileBrowserActivity.h"
@@ -283,11 +282,6 @@ void ActivityManager::goToBrowser() {
 void ActivityManager::goToReader(std::string path, const HalDisplay::RefreshMode replaceRefreshMode) {
   replaceActivity(std::make_unique<ReaderActivity>(renderer, mappedInput, std::move(path), replaceRefreshMode),
                   replaceRefreshMode);
-}
-
-void ActivityManager::goToSleep(bool poweringOff) {
-  replaceActivity(std::make_unique<SleepActivity>(renderer, mappedInput, poweringOff));
-  loop();  // Important: sleep screen must be rendered immediately, the caller will go to sleep right after this returns
 }
 
 void ActivityManager::goToBoot() { replaceActivity(std::make_unique<BootActivity>(renderer, mappedInput)); }

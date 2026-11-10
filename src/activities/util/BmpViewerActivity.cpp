@@ -97,7 +97,7 @@ void BmpViewerActivity::onEnter() {
       }
 
       // 4. Prepare Rendering
-      const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SET_SLEEP_COVER), "", "");
+      const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
 
       GUI.fillPopupProgress(renderer, popupRect, 50);
 
@@ -138,66 +138,12 @@ void BmpViewerActivity::onExit() {
   renderer.displayBuffer(HalDisplay::HALF_REFRESH);
 }
 
-void BmpViewerActivity::doSetSleepCover() {
-  GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
-
-  bool success = false;
-
-  if (filePath == "/sleep.bmp") {
-    // Already the active custom sleep cover; no need to copy it onto itself
-    // (doing so would truncate the file while it's still open for reading).
-    success = true;
-  } else {
-    FsFile inFile, outFile;
-    if (Storage.openFileForRead("BMP", filePath, inFile)) {
-      // Write to a temp file first so a failed/interrupted copy never leaves
-      // /sleep.bmp truncated or corrupted.
-      if (Storage.openFileForWrite("BMP", "/sleep.bmp.tmp", outFile)) {
-        char buffer[2048];
-        int bytesRead;
-        success = true;
-        while ((bytesRead = inFile.read(buffer, sizeof(buffer))) > 0) {
-          if (outFile.write(buffer, bytesRead) != bytesRead) {
-            success = false;
-            break;
-          }
-        }
-        outFile.close();
-        if (success) {
-          Storage.remove("/sleep.bmp");
-          success = Storage.rename("/sleep.bmp.tmp", "/sleep.bmp");
-        } else {
-          Storage.remove("/sleep.bmp.tmp");
-        }
-      }
-      inFile.close();
-    }
-  }
-
-  if (success) {
-    SETTINGS.sleepScreen = CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM;
-    SETTINGS.saveToFile();
-    GUI.drawPopup(renderer, tr(STR_DONE));
-  } else {
-    GUI.drawPopup(renderer, tr(STR_FAILED_LOWER));
-  }
-
-
-  delay(1000);
-  onEnter();
-}
-
 void BmpViewerActivity::loop() {
   // Keep CPU awake/polling so 1st click works
   Activity::loop();
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     activityManager.goToFileBrowser(filePath);
-    return;
-  }
-
-  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    doSetSleepCover();
     return;
   }
 
@@ -253,6 +199,5 @@ bool BmpViewerActivity::onTouchTap(int16_t x, int16_t) {
     return false;
   }
 
-  doSetSleepCover();
-  return true;
+  return false;
 }
