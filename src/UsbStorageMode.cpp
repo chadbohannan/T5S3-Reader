@@ -264,10 +264,11 @@ void runUsbStorageMode(GfxRenderer& renderer, MappedInputManager& input) {
     if (now - lastSerial >= SERIAL_INTERVAL_MS) {
       lastSerial = now;
       UsbMsc.serial().printf(
-          "[%lu] link=%s access=%s error=%s read=%s written=%s errors=%s exit=%d rdCalls=%lu rdSdMs=%lu wrCalls=%lu "
-          "wrSdMs=%lu\n",
+          "[%lu] link=%s access=%s error=%s read=%s written=%s errors=%s exit=%d rdCalls=%lu rdHits=%lu rdSdMs=%lu "
+          "wrCalls=%lu wrSdMs=%lu\n",
           now, linkText(s.link), n.access, n.error, n.read, n.written, n.errors, exitEnabled,
-          static_cast<unsigned long>(s.readCalls), static_cast<unsigned long>(s.readUs / 1000),
+          static_cast<unsigned long>(s.readCalls), static_cast<unsigned long>(s.readAheadHits),
+          static_cast<unsigned long>(s.readUs / 1000),
           static_cast<unsigned long>(s.writeCalls), static_cast<unsigned long>(s.writeUs / 1000));
     }
     delay(20);

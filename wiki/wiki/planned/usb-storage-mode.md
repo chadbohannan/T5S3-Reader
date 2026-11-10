@@ -116,12 +116,15 @@ Measured on 2026-11-10 with the same host script for each build: enter the mode 
 | --- | --- | --- |
 | SdFat default, `USE_SPI_ARRAY_TRANSFER 0` | 0.31 MB/s | 0.34 MB/s |
 | `-DUSE_SPI_ARRAY_TRANSFER=1` | 0.62–0.63 MB/s | 0.64–0.65 MB/s |
+| plus read-ahead | 0.66–0.67 MB/s | 0.93–0.94 MB/s |
 
 **Cause of the first half.** On ESP32 `SdFatConfig.h` selects `USE_SPI_ARRAY_TRANSFER 0`, so `SdSpiArduinoDriver::receive()` and `send()` (`SdSpiLibDriver.h`) call `SPI.transfer()` once per byte, and each call is a separate SPI transaction. With `1` they call `SPI.transfer(buf, n)`, which the core runs through `transferBytes()` and the SPI FIFO. The flag is in `[base]` `build_flags`, so every SD read and write in the firmware uses it, not only USB mode. Earlier, TXT indexing read its file at about 0.55 MB/s ([TXT indexing performance](txt-indexing-performance.md)), which fits the same limit; that has not been measured again.
 
 **Where the rest goes.** `HalUsbMsc` times the SD calls and the CDC status line reports them (`rdCalls`, `rdSdMs`, `wrCalls`, `wrSdMs`). After the write test: 8,226 write calls, 12,842 ms in SD, so about 1.56 ms per 4 KB call (about 2.6 MB/s); reads took about 1.50 ms per call. The host saw about 6.4 ms per 4 KB, so the SD card is only about a quarter of the time. The remaining about 4.9 ms per 4 KB (about 0.84 MB/s) is the USB side. The ESP32-S3 OTG controller is full speed (12 Mbit/s), and TinyUSB MSC moves one 4 KB buffer (`CONFIG_TINYUSB_MSC_BUFSIZE`, built into the prebuilt framework library) and then calls the callback, so the USB and SD phases do not overlap.
 
-**Limit.** With an infinitely fast card the drive would reach only about 0.84 MB/s, 33% above now. Faster SD (dedicated SPI to keep multi-block commands open across calls, saving part of about 0.7 ms command overhead per call) could give a few percent. Double buffering to overlap USB and SD is the only large lever, and the framework's MSC class does not support it. This is accepted for now: a 5 MB EPUB copies in about 8 s.
+**Read-ahead.** TinyUSB calls the read callback for one 4 KB chunk at a time and blocks while the callback runs. After each read, `HalUsbMsc` now gives the next chunk (the next LBA, same size) to a worker task (`usbPrefetch`, core 0, priority one below the TinyUSB task). The worker reads it from the card while TinyUSB sends the current chunk to the host. The next callback waits for the worker and copies the chunk if the LBA and size match; else it reads from the card as before. A write callback or a stop first waits for the worker and discards its chunk, so the host never reads stale data. Results over two 32 MiB runs: 98.8% of read calls came from the read-ahead buffer (`rdHits` in the CDC status line), the time the read callback waited for the card fell from about 1.5 ms to about 0.03 ms per call, and the read rate rose by 45%. `cmp` matched both runs, and Exit still restarts into the reader on the JTAG serial port.
+
+**Limit.** Reads are now limited by full-speed USB alone, at about 4.3 ms per 4 KB. The earlier estimate of about 0.84 MB/s for that limit was low. Writes are still serial: TinyUSB receives a chunk, then the callback writes it to the card (about 1.56 ms). To overlap them, the callback would have to report success before the card has the data (write-behind). An error on the card would then reach the host late or not at all, which is a bad trade for a drive the user unplugs. Write-behind is not planned; 0.66 MB/s copies a 5 MB EPUB in about 8 s. A larger TinyUSB MSC buffer needs a rebuild of the framework library and is not planned either.
 
 ## Exit and the USB pins
 
@@ -138,7 +141,7 @@ For scripted tests: `CMD:USBMODE` on the reader's serial port enters the mode (s
 3. **Boot flag and branch** in `main.cpp`: done in the dev version, with a plain screen instead of `UsbStorageActivity`.
 4. **Home menu item** and strings: done in the dev version.
 5. **Status screen** metadata, mount lines and the exit lock: done 2026-11-09 in `src/UsbStorageMode.cpp` (a plain loop, not a `UsbStorageActivity`).
-6. **Hardening:** throughput (done, see Throughput), the RTC log carried to the card on the next boot, and the test matrix below.
+6. **Hardening:** throughput (done, including read-ahead, see Throughput), the RTC log carried to the card on the next boot, and the test matrix below.
 
 ## Verification
 

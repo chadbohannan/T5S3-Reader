@@ -21,7 +21,8 @@ class HalUsbMsc {
     char lastErrorOp;        // 'R' read, 'W' write, 'r'/'w' bad request, '-' none
     uint32_t lastErrorSector;
     uint32_t readCalls, writeCalls;  // callbacks since begin()
-    uint32_t readUs, writeUs;        // microseconds inside the SD calls
+    uint32_t readUs, writeUs;        // microseconds the callbacks waited for the card
+    uint32_t readAheadHits;          // reads served from the read-ahead buffer
   };
 
   // Syncs the card, then starts the drive and the serial port. Call once, with no file open.

@@ -11,8 +11,13 @@
 #include <soc/rtc_cntl_reg.h>
 #include <soc/usb_serial_jtag_reg.h>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
+
 #include <atomic>
 #include <cstdio>
+#include <cstring>
 
 namespace {
 constexpr uint32_t SECTOR = 512;
@@ -35,6 +40,49 @@ std::atomic<uint32_t> readCalls{0};
 std::atomic<uint32_t> writeCalls{0};
 std::atomic<uint32_t> readUs{0};
 std::atomic<uint32_t> writeUs{0};
+std::atomic<uint32_t> readAheadHits{0};
+
+// Read-ahead: after each read, a worker task reads the next chunk from the card while TinyUSB
+// sends the current one to the host, so SD time and USB time overlap. The callbacks run in the
+// TinyUSB task only, so the request state below has one owner; the worker hands its result back
+// through `prefetchDone`.
+constexpr size_t PREFETCH_BYTES = 4096;  // CONFIG_TINYUSB_MSC_BUFSIZE: TinyUSB never asks for more
+uint8_t prefetchBuf[PREFETCH_BYTES];
+TaskHandle_t prefetchTask = nullptr;
+SemaphoreHandle_t prefetchDone = nullptr;
+bool prefetchPending = false;  // a request was sent and its result not yet taken
+uint32_t prefetchLba = 0;
+uint32_t prefetchCount = 0;
+volatile bool prefetchOk = false;
+uint32_t driveSectors = 0;
+
+void prefetchWorker(void*) {
+  for (;;) {
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    prefetchOk = Storage.rawReadSectors(prefetchLba, prefetchBuf, prefetchCount);
+    xSemaphoreGive(prefetchDone);
+  }
+}
+
+// Waits for the pending request, if any. Returns true when it read exactly [lba, lba+count).
+bool takePrefetch(const uint32_t lba, const uint32_t count) {
+  if (!prefetchPending) {
+    return false;
+  }
+  xSemaphoreTake(prefetchDone, portMAX_DELAY);
+  prefetchPending = false;
+  return prefetchOk && prefetchLba == lba && prefetchCount == count;
+}
+
+void startPrefetch(const uint32_t lba, const uint32_t count) {
+  if (!prefetchTask || count * SECTOR > PREFETCH_BYTES || lba + count > driveSectors) {
+    return;
+  }
+  prefetchLba = lba;
+  prefetchCount = count;
+  prefetchPending = true;
+  xTaskNotifyGive(prefetchTask);
+}
 
 class NullPrint : public Print {
  public:
@@ -52,9 +100,20 @@ int32_t onRead(const uint32_t lba, const uint32_t offset, void* buffer, const ui
     noteError('r', lba);
     return -1;
   }
+  const uint32_t count = bufsize / SECTOR;
   const uint32_t t0 = micros();
-  const bool ok = Storage.rawReadSectors(lba, static_cast<uint8_t*>(buffer), bufsize / SECTOR);
-  readUs += micros() - t0;
+  bool ok;
+  if (takePrefetch(lba, count)) {
+    memcpy(buffer, prefetchBuf, bufsize);
+    readAheadHits++;
+    ok = true;
+  } else {
+    ok = Storage.rawReadSectors(lba, static_cast<uint8_t*>(buffer), count);
+  }
+  readUs += micros() - t0;  // time TinyUSB waited for data
+  if (ok) {
+    startPrefetch(lba + count, count);
+  }
   readCalls++;
   if (!ok) {
     noteError('R', lba);
@@ -70,6 +129,7 @@ int32_t onWrite(const uint32_t lba, const uint32_t offset, uint8_t* buffer, cons
     noteError('w', lba);
     return -1;
   }
+  takePrefetch(0, 0);  // the write may change the sectors it holds
   const uint32_t t0 = micros();
   const bool ok = Storage.rawWriteSectors(lba, buffer, bufsize / SECTOR);
   writeUs += micros() - t0;
@@ -85,6 +145,7 @@ int32_t onWrite(const uint32_t lba, const uint32_t offset, uint8_t* buffer, cons
 
 bool onStartStop(uint8_t /*powerCondition*/, const bool start, const bool loadEject) {
   if (!start) {
+    takePrefetch(0, 0);
     Storage.rawSync();  // any stop: nothing may stay buffered on the card
     if (loadEject) {
       msc->mediaPresent(false);
@@ -107,6 +168,13 @@ bool HalUsbMsc::begin() {
   sectorCount = Storage.rawSectorCount();
   if (sectorCount == 0 || !Storage.rawSync()) {
     return false;
+  }
+  driveSectors = sectorCount;
+  prefetchDone = xSemaphoreCreateBinary();
+  // Below the TinyUSB task (configMAX_PRIORITIES - 1), above the status loop.
+  if (prefetchDone) {
+    xTaskCreatePinnedToCore(prefetchWorker, "usbPrefetch", 4096, nullptr, configMAX_PRIORITIES - 2, &prefetchTask,
+                            0);
   }
 
   msc = new USBMSC();
@@ -182,6 +250,7 @@ HalUsbMsc::Status HalUsbMsc::status(const bool cablePresent) const {
   s.writeCalls = writeCalls;
   s.readUs = readUs;
   s.writeUs = writeUs;
+  s.readAheadHits = readAheadHits;
   return s;
 }
 
