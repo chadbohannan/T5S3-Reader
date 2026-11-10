@@ -19,4 +19,5 @@ class BatteryStatusActivity final : public Activity {
   bool hasState = false;
 
   void refreshBattery();
+  void openPowerProfile();
 };

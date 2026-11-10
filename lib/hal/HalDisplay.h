@@ -73,6 +73,9 @@ class HalDisplay {
   bool restoreSleepFrame();
   bool isResumingFromSleep() const { return resumingFromSleep; }
 
+  // No panel update running and the panel rails are off (light sleep is safe).
+  bool isIdle() const;
+
   // Access to frame buffer
   uint8_t* getFrameBuffer() const;
 

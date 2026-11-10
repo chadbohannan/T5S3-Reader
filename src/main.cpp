@@ -136,6 +136,9 @@ unsigned long t1 = 0;
 unsigned long t2 = 0;
 constexpr unsigned long kBootConfirmHoldMs = 700;
 constexpr unsigned long kPcaButtonPowerOffHoldMs = 2000;
+// Longest light-sleep nap while idle: how quickly a USB plug-in is noticed
+// (the charger has no wake line).
+constexpr unsigned long kNapPollMs = 1000;
 constexpr unsigned long kEpd47PowerOffHoldMs = 2000;
 
 // Verify power button press duration on wake-up from deep sleep
@@ -601,7 +604,7 @@ void loop() {
   }
 
   const unsigned long sleepTimeoutMs = SETTINGS.getSleepTimeoutMs();
-  if (millis() - lastActivityTime >= sleepTimeoutMs) {
+  if (millis() - lastActivityTime >= sleepTimeoutMs && !activityManager.keepAwakeIdle()) {
     if (gpio.isUsbConnected()) {
       LOG_DBG("SLP", "Auto sleep skipped after %lu ms of inactivity because USB is connected", sleepTimeoutMs);
       lastActivityTime = millis();
@@ -671,7 +674,21 @@ void loop() {
     if (millis() - lastActivityTime >= HalPowerManager::IDLE_POWER_SAVING_MS) {
       // If we've been inactive for a while, increase the delay to save power
       powerManager.setPowerSaving(true);  // Lower CPU frequency after extended inactivity
-      delay(50);
+      // Light-sleep instead of spinning when nothing is happening. Inputs wake the
+      // chip at once; the timer wakes it to poll USB (it has no wake line) and to
+      // reach the auto-sleep deadline. The panel and front light are unaffected.
+      unsigned long napUntil = millis() + kNapPollMs;
+      if (!activityManager.keepAwakeIdle()) {
+        const unsigned long sleepDeadline = lastActivityTime + sleepTimeoutMs;
+        if (static_cast<long>(sleepDeadline - napUntil) < 0) {
+          napUntil = sleepDeadline;
+        }
+      }
+      const bool napped = gpio.isQuiescent() && display.isIdle() && activityManager.isRenderIdle() &&
+                          powerManager.nap(napUntil, gpio.usbConnectedAtLastUpdate());
+      if (!napped) {
+        delay(50);
+      }
     } else {
       // Short delay to prevent tight loop while still being responsive
       delay(10);

@@ -32,6 +32,13 @@ void prepareSdBus();
 void disableGpsLora();
 void deinitForSleep();
 
+// Light sleep between loop passes (see HalPowerManager::nap). armLightSleepWake()
+// sets the board's inputs as GPIO wake sources and keeps the front light running.
+// It returns false when the board cannot nap now; nothing is armed then.
+// *sideButtonArmed is false when a button has no wake line and must be polled.
+bool armLightSleepWake(bool* sideButtonArmed);
+void disarmLightSleepWake();
+
 struct BatteryProfile {
   uint16_t inputLimitMa = 0;
   uint16_t capacityMah = 0;

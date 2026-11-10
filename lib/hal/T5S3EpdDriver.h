@@ -93,6 +93,8 @@ class T5S3EpdDriver {
   // kPowerHoldMs afterwards so that quick successive updates skip power-on.
   void wait() const;
   bool busy() const { return busy_; }
+  // No update running and the rails are off: safe to light-sleep.
+  bool idle() const { return !busy_ && !railsOn_; }
   // wait(), then switch the panel rails off immediately (before sleep).
   void powerDown();
 

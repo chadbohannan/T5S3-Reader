@@ -4,7 +4,7 @@ The firmware has three low-power states: CPU down-clocking while idle, deep slee
 
 ## Idle down-clocking
 
-`HalPowerManager` (`lib/hal/HalPowerManager.{h,cpp}`, global `powerManager`) records the boot CPU frequency. After 3 s without input (`IDLE_POWER_SAVING_MS`) the main loop calls `setPowerSaving(true)`, which sets 10 MHz (`LOW_POWER_FREQ`), and lengthens its delay to 50 ms. Any input, `preventAutoSleep()`, or `skipLoopDelay()` restores the normal frequency. `HalPowerManager::Lock` is an RAII guard that forces normal speed; the [ActivityManager](../components/activity-manager.md) render task holds one during every render, and the sleep and power-off paths hold one while they save state. `getBatteryPercentage()` caches the board's reading for 1.5 s (`BATTERY_POLL_MS`).
+`HalPowerManager` (`lib/hal/HalPowerManager.{h,cpp}`, global `powerManager`) records the boot CPU frequency. After 3 s without input (`IDLE_POWER_SAVING_MS`) the main loop calls `setPowerSaving(true)`, which sets 10 MHz (`LOW_POWER_FREQ`), and lengthens its delay to 50 ms. Any input, `preventAutoSleep()`, or `skipLoopDelay()` restores the normal frequency; `keepAwakeIdle()` blocks auto-sleep without doing so. Measured on 2026-11-10, the down-clock cuts idle draw from 52 mA to 24 mA with the light off ([power budget](../syntheses/power-budget.md)). The Arduino-ESP32 2.0.14 prebuilt config has no `CONFIG_PM_ENABLE` or tickless idle, so the chip never sleeps on its own. On branch `light_sleep` (2026-11-10, untested) the idle branch instead calls `HalPowerManager::nap()`, which light-sleeps until an input or a 1 s timer wakes it, with the front light kept on; the design, its idle checks and wake sources are in [light sleep](../planned/light-sleep.md). `HalPowerManager::Lock` is an RAII guard that forces normal speed; the [ActivityManager](../components/activity-manager.md) render task holds one during every render, and the sleep and power-off paths hold one while they save state. `getBatteryPercentage()` caches the board's reading for 1.5 s (`BATTERY_POLL_MS`).
 
 ## Deep sleep
 
@@ -47,3 +47,17 @@ Not yet measured on hardware at the time of writing: the time to write and read 
 ## Board differences
 
 On EPD47 there is no backlight, no battery cut, and no touch wake (GPIO 47 is not an RTC GPIO). Power-off and sleep are the same deep sleep, and only GPIO 21 wakes the board. The EPD47 adaptation plan lists "thirty sleep/wake cycles without display corruption" and measured sleep current as hardware gates that were still open when it was written.
+
+## Measured draw (2026-11-10)
+
+Two on-device runs of the [power profiler](../runbooks/measure-power-draw.md) on a T5S3 Pro near full charge. The data and analysis are in [power budget](../syntheses/power-budget.md):
+
+| State | Draw |
+| --- | --- |
+| Awake, CPU 10 MHz idle, light 0 | 24 to 25 mA |
+| Awake, CPU 10 MHz idle, light 2 (default) | 31 to 32 mA |
+| Awake, CPU 10 MHz idle, light 10 | 114 to 115 mA |
+| Light sleep, light 0 | 12.0 mA |
+| Awake, CPU held at 240 MHz, light 0 | 50 to 52 mA |
+
+Three results change the sleep design. Light sleep, unused today, saves about 12.8 mA of idle draw, so idling at the default light could go from about 47 h to about 78 h, if the front light's LEDC PWM is moved to a clock that runs in light sleep. About 11.7 mA does not come from the ESP32's CPU; the likely sources are the touch controller and the SD card, which neither the awake path nor `Board::deinitForSleep()` powers down. If those parts stay on in deep sleep too, deep sleep may draw about 10 mA, which would be days of standby, not months. Deep-sleep current is not yet measured. The follow-up work is in [sleep endurance](../planned/sleep-endurance.md).

@@ -77,6 +77,12 @@ class HalGPIO {
 
   bool isUsbConnected() const;
   bool wasUsbStateChanged() const;
+  // USB state as of the last update(), without a new bus read.
+  bool usbConnectedAtLastUpdate() const { return lastUsbConnected; }
+
+  // True when no button is down or settling, no touch is in progress, and every
+  // wake line is released. Only then can the chip light-sleep without waking at once.
+  bool isQuiescent() const;
 
   enum class WakeupReason { PowerButton, Touch, AfterFlash, AfterUSBPower, Other };
 

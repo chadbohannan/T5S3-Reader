@@ -9,6 +9,7 @@
 #include <string>
 
 #include "MappedInputManager.h"
+#include "PowerProfileActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -319,6 +320,20 @@ void BatteryStatusActivity::loop() {
     requestUpdate();
     return;
   }
+
+  if (mappedInput.wasPressed(MappedInputManager::Button::Left)) {
+    openPowerProfile();
+  }
+}
+
+void BatteryStatusActivity::openPowerProfile() {
+  if (!Board::capabilities().hasDetailedBatteryTelemetry) {
+    return;
+  }
+  startActivityForResult(std::make_unique<PowerProfileActivity>(renderer, mappedInput), [this](const ActivityResult&) {
+    refreshBattery();
+    requestUpdate();
+  });
 }
 
 bool BatteryStatusActivity::onTouchTap(int16_t x, int16_t y) {
@@ -335,6 +350,11 @@ bool BatteryStatusActivity::onTouchTap(int16_t x, int16_t y) {
   if (button == MappedInputManager::Button::Confirm) {
     refreshBattery();
     requestUpdate();
+    return true;
+  }
+
+  if (button == MappedInputManager::Button::Left && Board::capabilities().hasDetailedBatteryTelemetry) {
+    openPowerProfile();
     return true;
   }
 
@@ -387,7 +407,7 @@ void BatteryStatusActivity::render(RenderLock&&) {
               chargerLines(state));
   }
 
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_UPDATE), "", "");
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_UPDATE), "Profile", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   renderer.displayBuffer();
 }

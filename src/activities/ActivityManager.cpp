@@ -38,7 +38,7 @@ void ActivityManager::renderTaskTrampoline(void* param) {
 
 void ActivityManager::renderTaskLoop() {
   while (true) {
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    const uint32_t taken = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     // Acquire the lock before reading currentActivity to avoid a TOCTOU race
     // where the main task deletes the activity between the null-check and render().
     RenderLock lock;
@@ -55,6 +55,14 @@ void ActivityManager::renderTaskLoop() {
     if (waiter) {
       xTaskNotify(waiter, 1, eIncrement);
     }
+    pendingRenders.fetch_sub(taken);
+  }
+}
+
+void ActivityManager::notifyRenderTask() {
+  if (renderTaskHandle) {
+    pendingRenders.fetch_add(1);
+    xTaskNotify(renderTaskHandle, 1, eIncrement);
   }
 }
 
@@ -218,9 +226,7 @@ void ActivityManager::loop() {
     requestedUpdate = false;
     // Using direct notification to signal the render task to update
     // Increment counter so multiple rapid calls won't be lost
-    if (renderTaskHandle) {
-      xTaskNotify(renderTaskHandle, 1, eIncrement);
-    }
+    notifyRenderTask();
   }
 }
 
@@ -328,6 +334,8 @@ void ActivityManager::popActivity() {
 
 bool ActivityManager::preventAutoSleep() const { return currentActivity && currentActivity->preventAutoSleep(); }
 
+bool ActivityManager::keepAwakeIdle() const { return currentActivity && currentActivity->keepAwakeIdle(); }
+
 bool ActivityManager::isReaderActivity() const { return currentActivity && currentActivity->isReaderActivity(); }
 
 bool ActivityManager::isReaderActivityInStack() const {
@@ -354,9 +362,7 @@ ScreenshotInfo ActivityManager::getScreenshotInfo() const {
 
 void ActivityManager::requestUpdate(bool immediate) {
   if (immediate) {
-    if (renderTaskHandle) {
-      xTaskNotify(renderTaskHandle, 1, eIncrement);
-    }
+    notifyRenderTask();
   } else {
     // Deferring the update until current loop is finished
     // This is to avoid multiple updates being requested in the same loop
@@ -389,7 +395,7 @@ void ActivityManager::requestUpdateAndWait() {
   // Cannot call while holding RenderLock or it will cause a deadlock
   assert(!holdingRenderLock && "Cannot call requestUpdateAndWait() while holding RenderLock");
 
-  xTaskNotify(renderTaskHandle, 1, eIncrement);
+  notifyRenderTask();
   ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 }
 

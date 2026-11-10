@@ -36,7 +36,7 @@ This part is new compared with the migration guide. `ActivityManager::loop()` ha
 
 ## Query helpers
 
-`preventAutoSleep()`, `isReaderActivity()`, `isReaderPageActivity()` (matches names `EpubReader`, `TxtReader`, `XtcReader`), `skipLoopDelay()` and `getScreenshotInfo()` forward to the current activity. `isReaderActivityInStack()` also checks stacked activities, so the reader still counts when the global menu is on top. `main.cpp` uses it to set `APP_STATE.lastSleepFromReader` before sleep.
+`preventAutoSleep()`, `keepAwakeIdle()`, `isReaderActivity()`, `isReaderPageActivity()` (matches names `EpubReader`, `TxtReader`, `XtcReader`), `skipLoopDelay()` and `getScreenshotInfo()` forward to the current activity. `isReaderActivityInStack()` also checks stacked activities, so the reader still counts when the global menu is on top. `main.cpp` uses it to set `APP_STATE.lastSleepFromReader` before sleep.
 
 ## Hardware note
 

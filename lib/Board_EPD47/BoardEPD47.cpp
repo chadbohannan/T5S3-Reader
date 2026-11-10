@@ -26,6 +26,7 @@ constexpr BoardCapabilities kCapabilities = {
     .hasTouchWake = false,
     .hasTouch = true,
     .hasRtc = true,
+    .hasLightSleep = false,
 };
 
 constexpr BatteryProfile kBatteryProfile = {};
@@ -135,6 +136,15 @@ void deinitForSleep() {
   pinMode(EPD47_I2C_SCL, OPEN_DRAIN);
   pinMode(EPD47_TOUCH_INT, INPUT);
 }
+
+bool armLightSleepWake(bool* sideButtonArmed) {
+  if (sideButtonArmed) {
+    *sideButtonArmed = false;
+  }
+  return false;
+}
+
+void disarmLightSleepWake() {}
 
 const BatteryProfile& batteryProfile() { return kBatteryProfile; }
 

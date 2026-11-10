@@ -54,6 +54,9 @@ class Activity {
 
   virtual bool skipLoopDelay() { return false; }
   virtual bool preventAutoSleep() { return false; }
+  // Prevents auto sleep without counting as user activity, so the CPU still drops to
+  // its idle clock (preventAutoSleep() counts as activity and keeps full speed).
+  virtual bool keepAwakeIdle() { return false; }
   virtual bool isReaderActivity() const { return false; }
   virtual ScreenshotInfo getScreenshotInfo() const { return {}; }
 

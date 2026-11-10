@@ -27,15 +27,19 @@ The structured routing layer for the wiki. Each entry links to a page with a one
 - [Render scheduling](concepts/render-scheduling.md) — requestUpdate, immediate and wait variants, and their limits
 - [Page render pipeline](concepts/page-render-pipeline.md) — one EPUB page from input to panel: section, prewarm, BW, grayscale AA, refresh cadence
 - [SD card layout](concepts/sd-card-layout.md) — /.crosspoint files, cache versions and invalidation; docs/file-formats.md is stale
-- [Power and sleep](concepts/power-and-sleep.md) — CPU down-clock, invisible deep sleep (saved panel frame, no redraw on wake), power-off/battery cut, wake reasons
+- [Power and sleep](concepts/power-and-sleep.md) — CPU down-clock, invisible deep sleep (saved panel frame, no redraw on wake), power-off/battery cut, wake reasons; light sleep unused
 - [Firmware update](concepts/firmware-update.md) — partitions, merged image, SD flasher with board check, recovery mode, OTA (points at upstream repo)
 
 ## Runbooks
 - [Porting an activity](runbooks/port-activity-to-activity-manager.md) — convert upstream per-activity render code to ActivityManager
+- [Measure power draw](runbooks/measure-power-draw.md) — on-device power profiler (Battery Status → Profile): phases, fuel-gauge sampling, disturbed checks, procedure, CSV retrieval via USB storage mode, accuracy limits
 
 ## Syntheses
+- [Power budget](syntheses/power-budget.md) — measured T5S3 draw 2026-11-10 (2 runs): idle 24–25 mA (10 MHz, light off), light sleep 12 mA (~11.7 mA is not the ESP32 CPU), default light 2 = 31–32 mA, light 10 = 115 mA, 240 MHz = 50–52 mA; light ≈ 90 mA × duty
 
 ## Planned
+- [Light sleep](planned/light-sleep.md) — implemented on `light_sleep` 2026-11-10, profiled: naps save 8.7 mA at every light (light 2: 29.7 to 21.0 mA, ~50 h to ~71 h), light steady, 96.6% asleep; manual checks passed; `HalPowerManager::nap()` in the idle branch, GPIO wake (BOOT, GT911 INT, PCA9535 INT), front light on RC 8 MHz clock, idle checks, profiler nap phases, risks and test plan
+- [Sleep endurance](planned/sleep-endurance.md) — planned; light sleep measured (saves ~12.8 mA of 24.8); next find the ~11.7 mA other parts draw (touch, SD), deep-sleep current and wake time, then choose light sleep / timeout / touch-wake / frame-write changes
 - [TXT indexing performance](planned/txt-indexing-performance.md) — done in ea452ff; single-pass line breaker and sequential reads cut indexing of a 443 KB unwrapped file from 31.7 s to 2.3 s with identical offsets; measurements and left-out work
 - [USB Storage Mode](planned/usb-storage-mode.md) — done, merged 2026-11-10; decisions, history (spike, exit pin fix, throughput 0.31/0.34 to 0.66/0.94 MB/s), open device tests and LOG_* routing
 - [Fast, high-quality page render](planned/fast-quality-page-render.md) — in progress (steps 1–5 implemented, 3–5 pending visual check: Quality 1.34→0.35 s, real grays in Standard); measured panel timings (22–34 ms/frame, 0.7–1.3 s per turn), dithered AA in Standard, sweep cost; plan to ~170 ms with real grays

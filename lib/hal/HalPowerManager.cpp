@@ -1,6 +1,8 @@
 #include "HalPowerManager.h"
 
 #include <WiFi.h>
+#include <esp_sleep.h>
+#include <esp_timer.h>
 
 #include <cassert>
 
@@ -46,6 +48,36 @@ void HalPowerManager::setPowerSaving(bool enabled) {
 }
 
 void HalPowerManager::startDeepSleep(HalGPIO& gpio, bool wakeOnTouch) const { gpio.startDeepSleep(wakeOnTouch); }
+
+bool HalPowerManager::nap(const unsigned long untilMs, const bool usbConnected) {
+  if (!Board::capabilities().hasLightSleep || usbConnected || napBlockers.load() > 0 ||
+      currentLockMode != None || WiFi.getMode() != WIFI_MODE_NULL) {
+    return false;
+  }
+  const long remainingMs = static_cast<long>(untilMs - millis());
+  if (remainingMs < static_cast<long>(MIN_NAP_MS)) {
+    return false;
+  }
+
+  bool sideButtonArmed = false;
+  if (!Board::armLightSleepWake(&sideButtonArmed)) {
+    return false;
+  }
+  unsigned long napMs = static_cast<unsigned long>(remainingMs);
+  if (!sideButtonArmed && napMs > POLLED_BUTTON_NAP_MS) {
+    napMs = POLLED_BUTTON_NAP_MS;
+  }
+  esp_sleep_enable_timer_wakeup(static_cast<uint64_t>(napMs) * 1000ULL);
+
+  const int64_t startUs = esp_timer_get_time();
+  esp_light_sleep_start();
+  nappedUs += static_cast<uint64_t>(esp_timer_get_time() - startUs);
+  napCount++;
+
+  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
+  Board::disarmLightSleepWake();
+  return true;
+}
 
 uint16_t HalPowerManager::getBatteryPercentage() const {
   const unsigned long now = millis();

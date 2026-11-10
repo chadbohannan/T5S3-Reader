@@ -42,11 +42,11 @@ Reader resume needs `SETTINGS.resumeReaderOnBoot`, a saved `openEpubPath`, `last
 `loop()` runs on the Arduino main task. Each pass:
 
 - Polls input (`gpio.update()`) and handles a pending shutdown request from `requestShutdown()` (`src/PowerControl.h`), which activities use to power off from the main-loop context.
-- Prints heap stats every 10 s when serial is connected and accepts `CMD:SCREENSHOT` on serial, which dumps the raw framebuffer.
+- Prints heap stats every 10 s when serial is connected and accepts `CMD:SCREENSHOT` on serial, which dumps the raw framebuffer. Opening the port from the host resets the device, so the dump shows the screen after reboot, not the one before ([measure power draw](../runbooks/measure-power-draw.md)).
 - Resets the inactivity timer on any press, release, touch, or `preventAutoSleep()`.
 - Takes a screenshot when Power and Down are held together.
 - Maps the physical side buttons to logical buttons (see [input pipeline](../components/input-pipeline.md)) and handles long-press power-off.
-- Enters deep sleep after `SETTINGS.getSleepTimeoutMs()` of inactivity unless USB is connected.
+- Enters deep sleep after `SETTINGS.getSleepTimeoutMs()` of inactivity unless USB is connected or the activity returns true from `keepAwakeIdle()`.
 - Calls `activityManager.loop()`, which routes touch and runs the current activity.
 - Ends with `yield()` if the activity wants `skipLoopDelay()`, otherwise `delay(10)`, or `delay(50)` plus CPU down-clocking after 3 s idle.
 

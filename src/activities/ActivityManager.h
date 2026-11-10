@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
@@ -49,6 +51,9 @@ class ActivityManager {
 
   // Task to render and display the activity
   TaskHandle_t renderTaskHandle = nullptr;
+  // Render requests sent to the render task and not yet finished.
+  std::atomic<uint32_t> pendingRenders{0};
+  void notifyRenderTask();
   static void renderTaskTrampoline(void* param);
   [[noreturn]] virtual void renderTaskLoop();
 
@@ -110,12 +115,15 @@ class ActivityManager {
   void popActivity();
 
   bool preventAutoSleep() const;
+  bool keepAwakeIdle() const;
   bool isReaderActivity() const;
   // True if the reader is the current activity OR is alive underneath an overlay
   // (e.g. the global quick menu) on the stack.
   bool isReaderActivityInStack() const;
   bool isReaderPageActivity() const;
   bool skipLoopDelay() const;
+  // No render is queued or running.
+  bool isRenderIdle() const { return pendingRenders.load() == 0; }
   ScreenshotInfo getScreenshotInfo() const;
 
   // If immediate is true, the update will be triggered immediately.

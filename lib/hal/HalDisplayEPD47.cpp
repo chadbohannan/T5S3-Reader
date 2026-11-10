@@ -232,6 +232,8 @@ void HalDisplay::saveSleepFrame() {}
 
 bool HalDisplay::restoreSleepFrame() { return false; }
 
+bool HalDisplay::isIdle() const { return true; }
+
 uint8_t* HalDisplay::getFrameBuffer() const { return frameBuffer; }
 
 void HalDisplay::copyGrayscaleBuffers(const uint8_t* lsbBuffer, const uint8_t* msbBuffer) {

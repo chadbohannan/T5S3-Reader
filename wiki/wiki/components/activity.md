@@ -6,7 +6,7 @@
 
 `onEnter()` and `onExit()` only log now. They no longer create or delete a render task. Override them to allocate and free resources. `loop()` runs on the main task. `render(RenderLock&&)` runs on the render task (see [RenderLock](render-lock.md)).
 
-Touch hooks (added in this fork for the touch panel): `onTouchTap`, `onTouchSwipe`, `onTouchHomeButton`. Capability flags: `supportsTouchHomeButton`, `showsHomeTouchButton`, `supportsTouchButtonHints`, `supportsGlobalMenu` (all default true except `showsHomeTouchButton`). Others: `skipLoopDelay`, `preventAutoSleep`, `isReaderActivity`, `getScreenshotInfo`. The manager's [input routing](activity-manager.md#input-routing-in-loop) calls them.
+Touch hooks (added in this fork for the touch panel): `onTouchTap`, `onTouchSwipe`, `onTouchHomeButton`. Capability flags: `supportsTouchHomeButton`, `showsHomeTouchButton`, `supportsTouchButtonHints`, `supportsGlobalMenu` (all default true except `showsHomeTouchButton`). Others: `skipLoopDelay`, `preventAutoSleep`, `keepAwakeIdle`, `isReaderActivity`, `getScreenshotInfo`. `preventAutoSleep()` counts as user activity on every loop pass, so it also holds the CPU at full speed (52 mA idle instead of 24 mA, see [power budget](../syntheses/power-budget.md)); `keepAwakeIdle()`, added in 2026-11 for the [power profiler](../runbooks/measure-power-draw.md), only blocks auto-sleep. The manager's [input routing](activity-manager.md#input-routing-in-loop) calls them.
 
 ## Results and navigation
 

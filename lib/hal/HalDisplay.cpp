@@ -459,6 +459,8 @@ void HalDisplay::saveSleepFrame() {
   LOG_DBG("DSP", "Sleep frame saved in %lums", static_cast<unsigned long>(millis() - t0));
 }
 
+bool HalDisplay::isIdle() const { return epd == nullptr || epd->idle(); }
+
 bool HalDisplay::restoreSleepFrame() {
   const SleepFrameRecord record = gSleepFrameRecord;
   gSleepFrameRecord.magic = 0;  // single use

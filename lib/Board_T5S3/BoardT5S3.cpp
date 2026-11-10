@@ -9,6 +9,9 @@
 
 #include <SPI.h>
 #include <Wire.h>
+#include <driver/gpio.h>
+#include <driver/ledc.h>
+#include <esp_sleep.h>
 
 namespace BoardT5S3 {
 namespace {
@@ -38,6 +41,7 @@ constexpr BoardCapabilities kCapabilities = {
     .hasTouchWake = true,
     .hasTouch = true,
     .hasRtc = true,
+    .hasLightSleep = true,
 };
 
 bool batteryInitAttempted = false;
@@ -47,6 +51,9 @@ bq25896_hal_esp_idf_ctx_t bq25896HalCtx = {};
 bq25896_t bq25896 = {};
 BQ27220 bq27220;
 bool backlightInitialized = false;
+// True when the backlight PWM runs from the 8 MHz RC clock, which can stay on in light sleep.
+bool backlightKeepsRunningInSleep = false;
+uint8_t backlightLevel = 0;
 SemaphoreHandle_t i2cMutex = nullptr;
 
 constexpr uint16_t GT911_PRODUCT_ID_REG = 0x8140;
@@ -237,6 +244,20 @@ void initBacklight() {
   }
 
   ledcSetup(kBacklightPwmChannel, kBacklightPwmFrequencyHz, kBacklightPwmResolutionBits);
+  // Arduino clocks LEDC from XTAL, which stops in light sleep and would turn the
+  // light off in every nap. Move the channel's timer to the 8 MHz RC clock, which
+  // light sleep can keep on. Channel 0 uses low-speed timer 0.
+  const ledc_timer_config_t rcTimer = {
+      .speed_mode = LEDC_LOW_SPEED_MODE,
+      .duty_resolution = static_cast<ledc_timer_bit_t>(kBacklightPwmResolutionBits),
+      .timer_num = LEDC_TIMER_0,
+      .freq_hz = kBacklightPwmFrequencyHz,
+      .clk_cfg = LEDC_USE_RTC8M_CLK,
+  };
+  backlightKeepsRunningInSleep = ledc_timer_config(&rcTimer) == ESP_OK;
+  if (!backlightKeepsRunningInSleep) {
+    ledcSetup(kBacklightPwmChannel, kBacklightPwmFrequencyHz, kBacklightPwmResolutionBits);
+  }
   ledcAttachPin(T5S3_BL_EN, kBacklightPwmChannel);
   backlightInitialized = true;
   ledcWrite(kBacklightPwmChannel, 0);
@@ -246,6 +267,7 @@ void setBacklightLevel(uint8_t level) {
   if (!backlightInitialized) {
     initBacklight();
   }
+  backlightLevel = level;
   ledcWrite(kBacklightPwmChannel, backlightDutyForLevel(level));
 }
 
@@ -293,6 +315,49 @@ void deinitForSleep() {
   pinMode(T5S3_SD_CS, INPUT);
   pinMode(T5S3_GPS_RXD, INPUT);
   pinMode(T5S3_GPS_TXD, INPUT);
+}
+
+bool armLightSleepWake(bool* sideButtonArmed) {
+  bool pcaArmed = false;
+  if (sideButtonArmed) {
+    *sideButtonArmed = false;
+  }
+  if (backlightLevel > 0 && !backlightKeepsRunningInSleep) {
+    return false;
+  }
+  // The light's PWM clock must stay on while the light is lit; otherwise let it stop.
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC8M, backlightLevel > 0 ? ESP_PD_OPTION_ON : ESP_PD_OPTION_AUTO);
+
+  // BOOT button and GT911 INT idle high and go low on input.
+  gpio_wakeup_enable(static_cast<gpio_num_t>(T5S3_BOOT_BTN), GPIO_INTR_LOW_LEVEL);
+  gpio_wakeup_enable(static_cast<gpio_num_t>(T5S3_TOUCH_INT), GPIO_INTR_LOW_LEVEL);
+
+  // PCA9535 INT goes low on any input change and clears when the changed port
+  // is read. Read both ports, then use INT only if it is high (released).
+  if (T5S3_PCA9535_INT > 0 && pca9535Present()) {
+    uint8_t value = 0;
+    i2cReadReg(T5S3_PCA9535_ADDR, PCA_REG_INPUT0, &value, 1);
+    i2cReadReg(T5S3_PCA9535_ADDR, PCA_REG_INPUT0 + 1, &value, 1);
+    if (digitalRead(T5S3_PCA9535_INT) == HIGH) {
+      gpio_wakeup_enable(static_cast<gpio_num_t>(T5S3_PCA9535_INT), GPIO_INTR_LOW_LEVEL);
+      pcaArmed = true;
+    }
+  }
+  esp_sleep_enable_gpio_wakeup();
+  if (sideButtonArmed) {
+    *sideButtonArmed = pcaArmed;
+  }
+  return true;
+}
+
+void disarmLightSleepWake() {
+  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_GPIO);
+  gpio_wakeup_disable(static_cast<gpio_num_t>(T5S3_BOOT_BTN));
+  gpio_wakeup_disable(static_cast<gpio_num_t>(T5S3_TOUCH_INT));
+  if (T5S3_PCA9535_INT > 0) {
+    gpio_wakeup_disable(static_cast<gpio_num_t>(T5S3_PCA9535_INT));
+  }
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC8M, ESP_PD_OPTION_AUTO);
 }
 
 const BatteryProfile& batteryProfile() { return kBatteryProfile; }

@@ -149,6 +149,16 @@ void HalGPIO::update() {
 
 bool HalGPIO::wasUsbStateChanged() const { return usbStateChanged; }
 
+bool HalGPIO::isQuiescent() const {
+  if (currentState != 0 || lastState != 0 || touchActive || touchHomeButtonHeld) {
+    return false;
+  }
+  if (digitalRead(BoardPins::PowerButton) == LOW) {
+    return false;
+  }
+  return !touch.isAvailable() || digitalRead(BoardPins::TouchInterrupt) == HIGH;
+}
+
 bool HalGPIO::isPressed(uint8_t buttonIndex) const { return currentState & buttonBit(buttonIndex); }
 
 bool HalGPIO::wasPressed(uint8_t buttonIndex) const { return pressedEvents & buttonBit(buttonIndex); }
